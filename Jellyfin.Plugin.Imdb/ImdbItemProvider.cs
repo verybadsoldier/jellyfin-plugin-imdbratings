@@ -266,12 +266,12 @@ namespace MediaBrowser.Providers.Plugins.Imdb
             return _httpClientFactory.CreateClient(NamedClient.Default).GetAsync(url, cancellationToken);
         }
 
-        internal class ImdbRating
+        internal sealed class ImdbRating
         {
             public float ratingValue { get; set; }
         }
 
-        internal class ImdbData
+        internal sealed class ImdbData
         {
             public ImdbRating aggregateRating { get; set; }
         }

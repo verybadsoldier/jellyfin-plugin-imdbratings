@@ -12,25 +12,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v5
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: 6.0.x
+        dotnet-version: 9.0.x
     - name: Restore dependencies
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore -c Release;find
     - name: Archive production artifacts Jellyfin.Plugin.Imdb
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: Jellyfin.Plugin.Imdb (net6)
+        name: Jellyfin.Plugin.Imdb (net9)
         if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
         path: |
-          Jellyfin.Plugin.Imdb/obj/Release/net6.0/Jellyfin.Plugin.Imdb.dll
+          Jellyfin.Plugin.Imdb/obj/Release/net9.0/Jellyfin.Plugin.Imdb.dll
     - name: Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          Jellyfin.Plugin.Imdb/obj/Release/net6.0/Jellyfin.Plugin.Imdb.dll
+          Jellyfin.Plugin.Imdb/obj/Release/net9.0/Jellyfin.Plugin.Imdb.dll

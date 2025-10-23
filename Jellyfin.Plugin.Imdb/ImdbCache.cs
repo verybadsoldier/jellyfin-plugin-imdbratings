@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MediaBrowser.Providers.Plugins.Imdb
 {
-    internal class ImdbCache
+    internal sealed class ImdbCache
     {
         private Dictionary<string, CacheItem> _cache = new Dictionary<string, CacheItem>();
         private TimeSpan _ttl = TimeSpan.FromHours(12);
@@ -23,12 +23,11 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
         public float? Query(string imdbId)
         {
-            if (!_cache.ContainsKey(imdbId))
+            if (!_cache.TryGetValue(imdbId, out var entry))
             {
                 return null;
             }
 
-            var entry = _cache[imdbId];
             if (DateTime.UtcNow - entry.Timestamp > _ttl)
             {
                 _cache.Remove(imdbId);
