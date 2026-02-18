@@ -22,7 +22,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore -c Release;find
     - name: Archive production artifacts Jellyfin.Plugin.Imdb
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: Jellyfin.Plugin.Imdb (net9)
         if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
