@@ -69,10 +69,20 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
         private async Task<float?> GetImdbRating(string imdbId)
         {
-            var itemUrl = $"https://www.imdb.com/title/{imdbId}";
+            var itemUrl = $"https://www.imdb.com/title/{imdbId}/";
 
             using (var client = _httpClientFactory.CreateClient(NamedClient.Default))
             {
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
+                client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+                client.DefaultRequestHeaders.Add("Sec-Fetch-Dest", "document");
+                client.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "navigate");
+                client.DefaultRequestHeaders.Add("Sec-Fetch-Site", "none");
+                client.DefaultRequestHeaders.Add("Sec-Fetch-User", "?1");
+                client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
+
                 for (var i = 0; i < 10; ++i)
                 {
                     HttpResponseMessage response = await client.GetAsync(itemUrl).ConfigureAwait(false);
@@ -102,7 +112,7 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
                     if (matches.Count == 0)
                     {
-                        throw new InvalidOperationException("Error parsing IMDb website");
+                        throw new InvalidOperationException("Error parsing IMDb website. Received empty HTTP response from URL: " + itemUrl);
                     }
 
                     var jsonData = matches[0].Groups[1].Value;
