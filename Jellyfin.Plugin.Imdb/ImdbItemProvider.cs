@@ -69,70 +69,7 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
         private async Task<float?> GetImdbRating(string imdbId)
         {
-            var itemUrl = $"https://www.imdb.com/title/{imdbId}/";
-
-            using (var client = _httpClientFactory.CreateClient(NamedClient.Default))
-            {
-                client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8");
-                client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-Dest", "document");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-Mode", "navigate");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-Site", "none");
-                client.DefaultRequestHeaders.Add("Sec-Fetch-User", "?1");
-                client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
-
-                for (var i = 0; i < 10; ++i)
-                {
-                    HttpResponseMessage response = await client.GetAsync(itemUrl).ConfigureAwait(false);
-
-                    // Check if the request was successful.
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        if (response.StatusCode == HttpStatusCode.ServiceUnavailable)
-                        {
-                            int waitTime = 240;
-                            _logger.LogInformation("We were rate limited by IMDb. Current IMDb ID: {ID}. We wait for {Time} seconds now...", imdbId, waitTime);
-                            await Task.Delay(waitTime * 1000).ConfigureAwait(false);
-                            continue;
-                        }
-                        else
-                        {
-                            throw new InvalidOperationException($"Error querying IMDb URL: {itemUrl}. HTTP StatusCode: {response.StatusCode}");
-                        }
-                    }
-
-                    // Read the response content as a string.
-                    string responseContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                    Regex rx = new Regex("<script type=\"application/ld\\+json\">(.*?)</script>", RegexOptions.Compiled);
-
-                    MatchCollection matches = rx.Matches(responseContent);
-
-                    if (matches.Count == 0)
-                    {
-                        throw new InvalidOperationException("Error parsing IMDb website. Received empty HTTP response from URL: " + itemUrl);
-                    }
-
-                    var jsonData = matches[0].Groups[1].Value;
-                    var imdbData = JsonSerializer.Deserialize<ImdbData>(jsonData);
-
-                    if (imdbData.aggregateRating == null)
-                    {
-                        _logger.LogInformation("No IMDb rating found IMDb ID {ID}", imdbId);
-                        return null;
-                    }
-
-                    _logger.LogInformation("Retrieved IMDb rating for ID {ID}: {Rating}", imdbId, imdbData.aggregateRating.ratingValue);
-
-                    return imdbData.aggregateRating.ratingValue;
-                }
-
-                _logger.LogError("Failed getting an IMDb rating for ID {ID}", imdbId);
-
-                return null;
-            }
+            return await ImdbApiHelper.GetImdbRating(imdbId, _httpClientFactory, _logger).ConfigureAwait(false);
         }
 
         private BaseItem GetBaseItemFromPath(string path)
