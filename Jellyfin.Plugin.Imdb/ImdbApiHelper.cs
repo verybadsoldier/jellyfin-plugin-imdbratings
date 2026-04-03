@@ -75,13 +75,13 @@ namespace Jellyfin.Plugin.Imdb
             }
         }
 
-        private class ImdbData
+        private sealed class ImdbData
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:Element should begin with upper-case letter", Justification = "Casing needs to match actual JSON data")]
             public ImdbRating? aggregateRating { get; set; }
         }
 
-        private class ImdbRating
+        private sealed class ImdbRating
         {
             [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1300:Element should begin with upper-case letter", Justification = "Casing needs to match actual JSON data")]
             public float? ratingValue { get; set; }
