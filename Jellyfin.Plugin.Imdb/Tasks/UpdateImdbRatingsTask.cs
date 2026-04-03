@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
+using Jellyfin.Plugin.IMDb;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
@@ -69,6 +70,7 @@ namespace Jellyfin.Plugin.Imdb.Tasks
 
             foreach (var item in items)
             {
+                var cache = new IMDbRatingsManager(_logger);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Inside the Execute method loop:
@@ -78,11 +80,11 @@ namespace Jellyfin.Plugin.Imdb.Tasks
                     try
                     {
                         // Call the shared helper instead of a local method
-                        var rating = await ImdbApiHelper.GetImdbRating(imdbId, _httpClientFactory, _logger).ConfigureAwait(false);
+                        var rating = await cache.GetRatingAsync(imdbId).ConfigureAwait(false);
 
                         if (rating.HasValue && item.CommunityRating != rating.Value)
                         {
-                            _logger.LogInformation("Updating IMDb rating for {Name} from {OldRating} to {NewRating}", item.Name, item.CommunityRating, rating.Value);
+                            _logger.LogInformation("Updating IMDb rating for '{Name}' from {OldRating} to {NewRating}", item.Name, item.CommunityRating, rating.Value);
                             item.CommunityRating = rating.Value;
                             await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
                         }

@@ -20,8 +20,10 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using BitFaster.Caching;
 using Jellyfin.Extensions.Json;
 using Jellyfin.Plugin.Imdb;
+using Jellyfin.Plugin.IMDb;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
@@ -39,13 +41,14 @@ using static MediaBrowser.Providers.Plugins.Imdb.ImdbItemProvider;
 namespace MediaBrowser.Providers.Plugins.Imdb
 {
     public class ImdbItemProvider : IRemoteMetadataProvider<Series, SeriesInfo>,
-        IRemoteMetadataProvider<Movie, MovieInfo>, IRemoteMetadataProvider<Episode, EpisodeInfo>, IHasOrder
+        IRemoteMetadataProvider<Movie, MovieInfo>, IRemoteMetadataProvider<Episode, EpisodeInfo>, IHasOrder, IDisposable
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILibraryManager _libraryManager;
         private readonly IProviderManager _providerManager;
         private readonly ILogger _logger;
-        private ImdbCache _cache;
+        private IMDbRatingsManager _cache;
+        private bool _disposed;
 
         public ImdbItemProvider(
             IHttpClientFactory httpClientFactory,
@@ -59,18 +62,13 @@ namespace MediaBrowser.Providers.Plugins.Imdb
             _libraryManager = libraryManager;
             _providerManager = providerManager;
             _logger = logger;
-            _cache = new ImdbCache(TimeSpan.FromHours(24));
+            _cache = new IMDbRatingsManager(_logger);
         }
 
         public string Name => "The Internet Movie Database Ratings";
 
         // After primary option
         public int Order => 2;
-
-        private async Task<float?> GetImdbRating(string imdbId)
-        {
-            return await ImdbApiHelper.GetImdbRating(imdbId, _httpClientFactory, _logger).ConfigureAwait(false);
-        }
 
         private BaseItem GetBaseItemFromPath(string path)
         {
@@ -154,17 +152,9 @@ namespace MediaBrowser.Providers.Plugins.Imdb
                 return result;
             }
 
-            float? rating = _cache.Query(imdbId);
+            float? rating = await _cache.GetRatingAsync(imdbId).ConfigureAwait(false);
 
-            if (rating == null)
-            {
-                rating = await GetImdbRating(imdbId).ConfigureAwait(false);
-
-                if (rating != null)
-                {
-                    _cache.Add(imdbId, rating.Value);
-                }
-            }
+            _logger.LogInformation("Fetched IMDb rating for ID '{0}': {1}", imdbId, rating);
 
             result.Item.CommunityRating = rating;
             result.HasMetadata = true;
@@ -211,6 +201,32 @@ namespace MediaBrowser.Providers.Plugins.Imdb
         public Task<HttpResponseMessage> GetImageResponse(string url, CancellationToken cancellationToken)
         {
             return _httpClientFactory.CreateClient(NamedClient.Default).GetAsync(url, cancellationToken);
+        }
+
+        /// <summary>
+        /// Disposes of the resources used by the manager.
+        /// </summary>
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Releases the unmanaged resources used by the IMDbRatingsManager and optionally releases the managed resources.
+        /// </summary>
+        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    _cache.Dispose();
+                }
+
+                _disposed = true;
+            }
         }
 
         internal sealed class ImdbRating
