@@ -68,9 +68,10 @@ namespace Jellyfin.Plugin.Imdb.Tasks
             int totalItems = items.Count;
             int processed = 0;
 
+            var cache = new IMDbRatingsManager(_logger);
+
             foreach (var item in items)
             {
-                var cache = new IMDbRatingsManager(_logger);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 // Inside the Execute method loop:
