@@ -21,6 +21,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using BitFaster.Caching;
+using Jellyfin.Data.Enums;
 using Jellyfin.Extensions.Json;
 using Jellyfin.Plugin.Imdb;
 using Jellyfin.Plugin.IMDb;
@@ -72,16 +73,21 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
         private BaseItem GetBaseItemFromPath(string path)
         {
-            var items = _libraryManager.GetItemList(new InternalItemsQuery());
-
-            // Find the BaseItem with the matching file path
-            BaseItem item = items.FirstOrDefault(item => item.Path == path);
-            if (item == null)
+            if (string.IsNullOrWhiteSpace(path))
             {
-                throw new ArgumentException($"Could not find item with path '{path}' in the library. This should not happen?!");
+                return null;
             }
 
-            return item;
+            var query = new InternalItemsQuery
+            {
+                Path = path,
+                IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.Episode },
+                Limit = 1 // We only need the first match
+            };
+
+            var result = _libraryManager.GetItemList(query);
+
+            return result.Count > 0 ? result[0] : null;
         }
 
         private IEnumerable<IMetadataProvider<TItem>> GetMetaDataProviders<TItem>(BaseItem item, LibraryOptions options)

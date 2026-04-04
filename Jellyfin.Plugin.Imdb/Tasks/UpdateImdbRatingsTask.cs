@@ -2,15 +2,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Net;
+using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.IMDb;
-using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
@@ -45,7 +42,6 @@ namespace Jellyfin.Plugin.Imdb.Tasks
 
         public IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
         {
-            // Run the task weekly as a default
             return new[]
             {
                 new TaskTriggerInfo
@@ -68,19 +64,45 @@ namespace Jellyfin.Plugin.Imdb.Tasks
             int totalItems = items.Count;
             int processed = 0;
 
+            // Instantiate the manager once outside the loop
             var cache = new IMDbRatingsManager(_logger);
+            var providerName = "The Internet Movie Database Ratings";
 
             foreach (var item in items)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Inside the Execute method loop:
+                var itemType = item.GetType().Name; // e.g., "Movie", "Series", "Episode"
+                bool isProviderEnabled = false;
+
+                // Safely get the library options for this specific item
+                var options = _libraryManager.GetLibraryOptions(item);
+                if (options != null)
+                {
+                    var typeOptions = options.TypeOptions?.FirstOrDefault(t =>
+                        string.Equals(t.Type, itemType, StringComparison.OrdinalIgnoreCase));
+
+                    if (typeOptions != null && typeOptions.MetadataFetchers != null)
+                    {
+                        // Check if our provider is enabled for this library/type
+                        isProviderEnabled = typeOptions.MetadataFetchers.Contains(
+                            providerName, StringComparer.OrdinalIgnoreCase);
+                    }
+                }
+
+                // If disabled, skip this item
+                if (!isProviderEnabled)
+                {
+                    processed++;
+                    progress.Report((double)processed / totalItems * 100);
+                    continue;
+                }
+
                 var imdbId = item.GetProviderId(MetadataProvider.Imdb);
                 if (!string.IsNullOrEmpty(imdbId))
                 {
                     try
                     {
-                        // Call the shared helper instead of a local method
                         var rating = await cache.GetRatingAsync(imdbId).ConfigureAwait(false);
 
                         if (rating.HasValue && item.CommunityRating != rating.Value)
