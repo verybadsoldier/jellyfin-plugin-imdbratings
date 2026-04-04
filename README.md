@@ -11,7 +11,8 @@
 
 ## Important Notes & Prerequisites
 
-* **Requires Existing IMDb IDs:** This plugin does not perform title-based searches on IMDb. It relies on your media items already having an IMDb ID assigned to them (e.g., `tt0111161`). It is highly recommended to keep other metadata providers (like TheMovieDb or TheTVDB) enabled and prioritized above this plugin so they can fetch the IMDb ID, which this plugin will then use to fetch the rating.
+* **Requires IMDb IDs (via NFO or other Providers):** To avoid rate limits, this plugin does not perform title-based web searches on IMDb. It requires an IMDb ID (e.g., `tt0111161`) to look up the rating. It is **not** mandatory to have these IDs already inserted into your database via local `.nfo` files, provided you have other metadata fetchers (like TheMovieDb, OMDb, or TheTVDB) enabled for your library to fetch them during the scan.
+* **Order Independent:** If your media item does not yet have an IMDb ID, this plugin will automatically query your other enabled metadata providers to fetch the ID before applying the rating. Because of this robust fallback mechanism, **the order of the metadata plugins in your library settings does not matter.**
 * **Jellyfin Compatibility:** This plugin is built using .NET 9.0 and requires **Jellyfin Server 10.11.x or newer**. 
 
 ## Scheduled Task: "Update IMDb Ratings"
