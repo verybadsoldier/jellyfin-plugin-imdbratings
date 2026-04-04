@@ -26,7 +26,7 @@ namespace Jellyfin.Plugin.Imdb
         }
 
         /// <inheritdoc />
-        public override string Name => "IMDb";
+        public override string Name => "IMDb Ratings";
 
         /// <inheritdoc />
         public override Guid Id => Guid.Parse("1c203ef2-16ae-4b83-a0ab-34f865216ec3");
