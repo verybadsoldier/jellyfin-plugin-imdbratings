@@ -9,11 +9,11 @@
         "versions": [
             {
                 "version": "3.0.0.0",
-                "changelog": "\nchangelog\n- [8df4bea] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
+                "changelog": "\nchangelog\n- [f337a23] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
                 "targetAbi": "10.11.7.0",
-                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.0.0-rc7/imdb-ratings_3.0.0.0.zip",
-                "checksum": "79f6d72ad6c79db60e8ffa25170a5ada",
-                "timestamp": "2026-04-05T19:23:27Z"
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.0.0-rc8/imdb-ratings_3.0.0.0.zip",
+                "checksum": "f0bb8291d5f66b70249b3ba320b938bf",
+                "timestamp": "2026-04-05T19:51:23Z"
             }
         ]
     }
