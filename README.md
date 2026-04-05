@@ -1,13 +1,13 @@
 # Jellyfin IMDb Ratings Plugin
 
-**Jellyfin.Plugin.Imdb** is a custom metadata plugin for Jellyfin that automatically fetches and updates community ratings for your media using the Internet Movie Database (IMDb).
+**Jellyfin.Plugin.ImdbRatings** is a custom metadata plugin for Jellyfin that automatically fetches and updates community ratings for your media using the Internet Movie Database (IMDb).
 
 ## Features
 
 * **IMDb Community Ratings:** Automatically retrieves ratings for Movies, Series, and Episodes. 
 * **Official Data Source:** Downloads and caches the official IMDb ratings dataset (`title.ratings.tsv.gz`) directly from IMDb to provide fast, local lookups without web scraping or API rate limits.
 * **Provider Integration:** Acts as a seamless Remote Metadata Provider ("The Internet Movie Database Ratings") that integrates gracefully into Jellyfin's existing metadata refresh pipeline.
-* **Automatic Background Updates:** Includes a built-in scheduler task to keep your library's ratings up-to-date as IMDb scores change over time.
+* **Automatic Background Updates:** Includes a built-in scheduler task to keep your library's ratings up-to-date as IMDb scores change over time (defaults to every day at 3 AM).
 
 ## Important Notes & Prerequisites
 
