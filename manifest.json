@@ -6,14 +6,15 @@
         "overview": "Ratings from IMDb",
         "owner": "verybadsoldier",
         "category": "General",
+        "imageUrl": "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png",
         "versions": [
             {
                 "version": "3.0.0.0",
-                "changelog": "\nchangelog\n- [f337a23] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
+                "changelog": "\nchangelog\n- [fa8095e] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
                 "targetAbi": "10.11.7.0",
-                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.0.0-rc8/imdb-ratings_3.0.0.0.zip",
-                "checksum": "f0bb8291d5f66b70249b3ba320b938bf",
-                "timestamp": "2026-04-05T19:51:23Z"
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.0.0-rc9/imdb-ratings_3.0.0.0.zip",
+                "checksum": "9376cb36517e41fc87d348646b9c005d",
+                "timestamp": "2026-04-05T19:56:04Z"
             }
         ]
     }
