@@ -2,35 +2,201 @@ name: Build & Release
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "**" ]
     tags:
       - "v*.*.*"
   pull_request:
     branches: [ "main" ]
+  
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      artifact_name: ${{ steps.git_info.outputs.artifact_name }}
+    env:
+      PIP_BREAK_SYSTEM_PACKAGES: "true" # added this for local "act" run
     steps:
-    - uses: actions/checkout@v5
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: 9.0.x
-    - name: Restore dependencies
-      run: dotnet restore
-    - name: Build
-      run: dotnet build --no-restore -c Release;find
-    - name: Archive production artifacts Jellyfin.Plugin.Imdb
-      uses: actions/upload-artifact@v5
-      with:
-        name: Jellyfin.Plugin.Imdb (net9)
-        if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
-        path: |
-          Jellyfin.Plugin.Imdb/obj/Release/net9.0/Jellyfin.Plugin.Imdb.dll
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: |
-          Jellyfin.Plugin.Imdb/obj/Release/net9.0/Jellyfin.Plugin.Imdb.dll
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Extract .NET version from csproj
+        id: extract_dotnet
+        run: |
+          CSPROJ_PATH="./Jellyfin.Plugin.ImdbRatings/Jellyfin.Plugin.ImdbRatings.csproj"
+          
+          # Extract the TargetFramework value (e.g., "net9.0")
+          TARGET_FRAMEWORK=$(grep -oP '(?<=<TargetFramework>)[^<]+' "$CSPROJ_PATH")
+          
+          if [ -z "$TARGET_FRAMEWORK" ]; then
+            echo "Error: Could not extract TargetFramework from $CSPROJ_PATH"
+            exit 1
+          fi
+          
+          echo "Found TargetFramework: $TARGET_FRAMEWORK"
+          
+          # Format the version for setup-dotnet (e.g., "net9.0" becomes "9.0.x")
+          VERSION_NUM="${TARGET_FRAMEWORK#net}"
+          DOTNET_VERSION="${VERSION_NUM}.x"
+          
+          # Export to GITHUB_ENV for subsequent steps
+          echo "DOTNET_TARGET=${TARGET_FRAMEWORK}" >> $GITHUB_ENV
+          echo "DOTNET_VERSION=${DOTNET_VERSION}" >> $GITHUB_ENV
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "${{ env.DOTNET_VERSION }}"
+
+      - name: Update build.yaml and create changelog
+        id: meta
+        run: |-
+          # Get the raw git describe string (e.g., "v3.0.3" or "v3.0.3-5-g1234abc")
+          RAW_DESC=$(git describe --tags)
+          
+          # Remove the leading 'v' if present (e.g., "3.0.3-5-g1234abc")
+          DESC_NO_V="${RAW_DESC#v}"
+          
+          # Split the string at the first hyphen to get just the pure version number (e.g., "3.0.3")
+          # This ensures JPRM gets a valid semantic version even on branch builds
+          CLEAN_VERSION="${DESC_NO_V%%-*}"
+          
+          # This makes the ${CLEAN_VERSION} available to all later steps
+          echo "CLEAN_VERSION=${CLEAN_VERSION}" >> $GITHUB_ENV
+          
+          # This sets the var for OTHER JOBS (gh_release, add_to_repo)
+          echo "version=${CLEAN_VERSION}" >> $GITHUB_OUTPUT
+          
+          echo "Set version in build.yaml to ${CLEAN_VERSION}"
+          sed -i "s|^version: .*|version: '${CLEAN_VERSION}'|" ./build.yaml
+
+          echo "Setting framework to ${DOTNET_TARGET} in build.yaml"
+          sed -i "s|^framework: .*|framework: \"${DOTNET_TARGET}\"|" ./build.yaml
+          
+          # Safely generate changelog by grabbing the previous tag relative to the current commit
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^)
+          COMMIT_RANGE="${PREV_TAG}..HEAD"
+          
+          echo "Generate changelog for commit range ${COMMIT_RANGE}"
+          CHANGELOG=$(git log "$COMMIT_RANGE" --oneline --pretty=format:"- [%h] %s")
+          
+          echo "Inject changelog into build.yaml"
+          sed -i 's~^changelog: .*~changelog: |-\n~' ./build.yaml
+          echo -e "$CHANGELOG" | sed 's/^/  /' >> ./build.yaml
+          
+          echo "Content of build.yaml:"
+          cat ./build.yaml
+          
+          echo "Create changelog artifact"
+          mkdir -p ./artifacts
+          echo -e "$CHANGELOG" > ./artifacts/changelog.md
+          
+      - name: Build Jellyfin Plugin
+        uses: oddstr13/jellyfin-plugin-repository-manager@9497a0a499416cc572ed2e07a391d9f943a37b4d # v1.1.1
+        id: jprm
+        with:
+          dotnet-target: "${{ env.DOTNET_TARGET }}"
+          path: '.'
+          output: './artifacts'
+
+      - name: Generate Artifact Name
+        id: git_info
+        run: |
+          # Use git describe to generate a meaningful name
+          DESC=$(git describe --tags)
+          echo "artifact_name=build-artifact-${DESC}" >> $GITHUB_OUTPUT
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: ${{ steps.git_info.outputs.artifact_name }}
+          if-no-files-found: error
+          path: |
+            ./artifacts/changelog.md
+            ./artifacts/*.zip
+
+  gh_release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+
+      - name: Prepare GH Release Assets
+        # move changelog to not include it in the release, only use as bodyFile for release description
+        run: |-
+          mv ./changelog.md /tmp/changelog.md
+          for file in ./*; do
+            md5sum ${file#./} >> ${file%.*}.md5
+            sha256sum ${file#./} >> ${file%.*}.sha256
+          done
+          ls -l
+
+      - name: Upload GH Release Assets
+        uses: ncipollo/release-action@v1.20.0
+        with:
+          artifacts: ./*
+          bodyFile: /tmp/changelog.md
+          
+          
+  add_to_repo:
+    if: startsWith(github.ref, 'refs/tags/')
+    env:
+      CLEAN_VERSION: ${{ needs.build.outputs.version }}
+    needs:
+      - build
+      - gh_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: '0'
+          ref: "repository"
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: ${{ needs.build.outputs.artifact_name }}
+
+      - name: Update manifest.json
+        run: |-
+          echo "::group::Installing JPRM"
+          python3 -m pip install jprm
+          echo "::endgroup::"
+
+          RELEASE_TAG="${GITHUB_REF#refs/tags/}"
+          echo "set release tag to ${RELEASE_TAG}, get release info..."
+
+          # Add HTTP authorization header to be able to download from private github repo
+          RELEASE_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/repos/${{ github.repository }}/releases/tags/${RELEASE_TAG}")
+          DOWNLOAD_URL=$(echo "$RELEASE_INFO" | jq -r '.assets[] | select(.name | test("\\.zip$")) | .browser_download_url')
+          echo "download url: ${DOWNLOAD_URL}"
+          
+          echo "::group::Updating manifest.json"
+          jprm repo add ./manifest.json "$(ls -d *.zip)" -u "${DOWNLOAD_URL}" -U "${DOWNLOAD_URL}"
+          echo "::endgroup::"
+
+      - name: Commit file
+        run: |-
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -a -m "Update manifest.json for release ${GITHUB_REF#refs/tags/}"
+
+      - name: Push changes
+        uses: ad-m/github-push-action@v1.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: repository

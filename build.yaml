@@ -1,16 +1,15 @@
 ---
-name: "Template"
-guid: "eb5d7894-8eef-4b36-aa6f-5d124e828ce1"
-version: "2.1.0.0"
+name: "IMDb Ratings"
+guid: "12418add-9a9d-422d-8e35-dde91cf5baf9"
+version: "<template>"
 targetAbi: "10.11.7.0"
-framework: "net9.0"
-overview: "Short description about your plugin"
+framework: "<template>"
+overview: "Ratings from IMDb"
 description: >
-  This is a longer description that can span more than one
-  line and include details about your plugin.
+  Fetch IMDb ratings for movies, TV shows and episodes from the IMDb official source and use as community ratings in Jellyfin
 category: "General"
-owner: "jellyfin"
+owner: "verybadsoldier"
 artifacts:
-- "Jellyfin.Plugin.Template.dll"
+- "Jellyfin.Plugin.ImdbRatings.dll"
 changelog: >
   changelog

@@ -7,7 +7,7 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
-namespace Jellyfin.Plugin.Imdb
+namespace Jellyfin.Plugin.ImdbRatings
 {
     /// <summary>
     /// The main plugin.
@@ -29,7 +29,7 @@ namespace Jellyfin.Plugin.Imdb
         public override string Name => "IMDb Ratings";
 
         /// <inheritdoc />
-        public override Guid Id => Guid.Parse("1c203ef2-16ae-4b83-a0ab-34f865216ec3");
+        public override Guid Id => Guid.Parse("12418add-9a9d-422d-8e35-dde91cf5baf9");
 
         /// <summary>
         /// Gets the current plugin instance.
