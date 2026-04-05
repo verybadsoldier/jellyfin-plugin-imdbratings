@@ -7,7 +7,7 @@ using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 
-namespace Jellyfin.Plugin.Imdb
+namespace Jellyfin.Plugin.ImdbRatings
 {
     /// <summary>
     /// The main plugin.
