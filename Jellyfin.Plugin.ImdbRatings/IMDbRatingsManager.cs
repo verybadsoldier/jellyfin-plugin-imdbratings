@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using ICU4N.Logging;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.IMDb
+namespace Jellyfin.Plugin.ImdbRatings
 {
     /// <summary>
     /// Manages the downloading, caching, and retrieval of IMDb ratings.
