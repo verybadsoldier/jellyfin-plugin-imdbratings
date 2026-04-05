@@ -1,19 +1,19 @@
 [
     {
         "guid": "eb5d7894-8eef-4b36-aa6f-5d124e828ce1",
-        "name": "IMDbRatings",
-        "description": "Fetch IMDb ratings from official source and use as community ratings in Jellyfin\n",
-        "overview": "Short description about your plugin",
+        "name": "IMDb Ratings",
+        "description": "Fetch IMDb ratings for movies, TV shows and episodes from the IMDb official source and use as community ratings in Jellyfin\n",
+        "overview": "Ratings from IMDb",
         "owner": "verybadsoldier",
         "category": "General",
         "versions": [
             {
                 "version": "3.0.0.0",
-                "changelog": "\nchangelog\n- [2f34a8b] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
+                "changelog": "\nchangelog\n- [d8e3a1a] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
                 "targetAbi": "10.11.7.0",
-                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.0.0-rc5/imdbratings_3.0.0.0.zip",
-                "checksum": "455620088f9c8f43a8af20a3aff5b41f",
-                "timestamp": "2026-04-05T10:13:31Z"
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.0.0-rc6/imdb-ratings_3.0.0.0.zip",
+                "checksum": "bcab15b3e6ca4e56248f6769147505a2",
+                "timestamp": "2026-04-05T19:05:42Z"
             }
         ]
     }
