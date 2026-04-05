@@ -7,14 +7,14 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.IMDb;
+using Jellyfin.Plugin.ImdbRatings;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.Imdb.Tasks
+namespace Jellyfin.Plugin.ImdbRatings.Tasks
 {
     public class UpdateImdbRatingsTask : IScheduledTask
     {
