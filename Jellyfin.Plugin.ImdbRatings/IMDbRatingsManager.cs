@@ -67,6 +67,9 @@ namespace Jellyfin.Plugin.ImdbRatings
 
         private async Task UpdateRatingsCacheAsync()
         {
+            GC.Collect();
+            long memoryBefore = GC.GetTotalMemory(true);
+
             string url = "https://datasets.imdbws.com/title.ratings.tsv.gz";
             using var client = new HttpClient();
 
@@ -88,7 +91,6 @@ namespace Jellyfin.Plugin.ImdbRatings
                 {
                     string tconst = parts[0];
 
-                    // FIXED: Force the parser to always expect a dot as a decimal separator
                     if (float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float rating))
                     {
                         newCache[tconst] = rating;
@@ -99,6 +101,12 @@ namespace Jellyfin.Plugin.ImdbRatings
             _ratingsCache = newCache;
             _lastUpdated = DateTime.UtcNow;
             _logger.LogInformation("Finished updating IMDb rating DB. Number of entries: {0}", _ratingsCache.Count);
+
+            GC.Collect();
+            long memoryAfter = GC.GetTotalMemory(true);
+
+            long sizeInMegabytes = (memoryAfter - memoryBefore) / 1024 / 1024;
+            _logger.LogInformation("IMDb ratings database loaded. Memory footprint: {0} MB", sizeInMegabytes);
         }
 
         /// <summary>
