@@ -19,7 +19,7 @@ namespace Jellyfin.Plugin.ImdbRatings
         private readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
         private readonly ILogger _logger;
 
-        private Dictionary<string, float> _ratingsCache = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<int, float> _ratingsCache = new Dictionary<int, float>();
         private DateTime _lastUpdated = DateTime.MinValue;
         private bool _disposed;
 
@@ -30,6 +30,24 @@ namespace Jellyfin.Plugin.ImdbRatings
         public IMDbRatingsManager(ILogger logger)
         {
             _logger = logger;
+        }
+
+        private bool TryGetRating(string imdbId, out float rating)
+        {
+            rating = 0f;
+
+            if (string.IsNullOrWhiteSpace(imdbId) || !imdbId.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Invalid IMDb ID '{0}'", imdbId);
+                return false;
+            }
+
+            if (int.TryParse(imdbId.AsSpan(2), out int numericId))
+            {
+                return _ratingsCache.TryGetValue(numericId, out rating);
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -56,9 +74,8 @@ namespace Jellyfin.Plugin.ImdbRatings
                 }
             }
 
-            if (_ratingsCache.TryGetValue(imdbId, out float rating))
+            if (TryGetRating(imdbId, out float rating))
             {
-                _logger.LogInformation("Fetched IMDb rating from cache: {0}", rating);
                 return rating;
             }
 
@@ -79,7 +96,7 @@ namespace Jellyfin.Plugin.ImdbRatings
             using var gzipStream = new GZipStream(responseStream, CompressionMode.Decompress);
             using var reader = new StreamReader(gzipStream);
 
-            var newCache = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+            var newCache = new Dictionary<int, float>();
 
             await reader.ReadLineAsync().ConfigureAwait(false);
 
@@ -89,11 +106,20 @@ namespace Jellyfin.Plugin.ImdbRatings
                 var parts = line.Split('\t');
                 if (parts.Length >= 2)
                 {
-                    string tconst = parts[0];
+                    string imdbIdStr = parts[0];
 
-                    if (float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float rating))
+                    if (!imdbIdStr.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
                     {
-                        newCache[tconst] = rating;
+                        _logger.LogWarning("Invalid IMDb ID in IMDb database: '{}'", imdbIdStr);
+                        continue;
+                    }
+
+                    if (int.TryParse(imdbIdStr.AsSpan(2), out int numericId))
+                    {
+                        if (float.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out float rating))
+                        {
+                            newCache[numericId] = rating;
+                        }
                     }
                 }
             }
