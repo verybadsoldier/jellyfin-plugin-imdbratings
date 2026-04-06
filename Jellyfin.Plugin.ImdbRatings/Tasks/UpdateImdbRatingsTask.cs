@@ -66,6 +66,8 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
 
             // Instantiate the manager once outside the loop
             var cache = new IMDbRatingsManager(_logger);
+            await cache.EnsureRatingsLoadedAsync().ConfigureAwait(false);
+
             var providerName = "The Internet Movie Database Ratings";
 
             foreach (var item in items)

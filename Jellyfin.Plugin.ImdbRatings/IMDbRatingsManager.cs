@@ -16,11 +16,14 @@ namespace Jellyfin.Plugin.ImdbRatings
     /// </summary>
     public class IMDbRatingsManager : IDisposable
     {
-        private readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
+
+        private static Dictionary<int, float> _ratingsCache = new Dictionary<int, float>();
+        private static DateTime _lastUpdate = DateTime.MinValue;
+        private static bool _isLoaded = false;
+
         private readonly ILogger _logger;
 
-        private Dictionary<int, float> _ratingsCache = new Dictionary<int, float>();
-        private DateTime _lastUpdated = DateTime.MinValue;
         private bool _disposed;
 
         /// <summary>
@@ -51,28 +54,41 @@ namespace Jellyfin.Plugin.ImdbRatings
         }
 
         /// <summary>
+        /// Load or update the database.
+        /// </summary>
+        /// <returns>Task.</returns>
+        public async Task EnsureRatingsLoadedAsync()
+        {
+            if (_isLoaded && (DateTime.UtcNow - _lastUpdate).TotalHours < 24)
+            {
+                return;
+            }
+
+            await _updateLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                // Check if DB has been updated while we waited for the lock?
+                if (_isLoaded && (DateTime.UtcNow - _lastUpdate).TotalHours < 24)
+                {
+                    return;
+                }
+
+                await UpdateRatingsCacheAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _updateLock.Release();
+            }
+        }
+
+        /// <summary>
         /// Gets the IMDb rating for a specific title ID, updating the cache if it is older than 24 hours.
         /// </summary>
         /// <param name="imdbId">The IMDb ID (e.g., tt0111161).</param>
         /// <returns>The average rating, or null if not found.</returns>
         public async Task<float?> GetRatingAsync(string imdbId)
         {
-            if (DateTime.UtcNow - _lastUpdated > TimeSpan.FromHours(24))
-            {
-                await _updateLock.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    if (DateTime.UtcNow - _lastUpdated > TimeSpan.FromHours(24))
-                    {
-                        _logger.LogInformation("IMDb ratings data base too old (Last update: {0}), refreshing...", _lastUpdated);
-                        await UpdateRatingsCacheAsync().ConfigureAwait(false);
-                    }
-                }
-                finally
-                {
-                    _updateLock.Release();
-                }
-            }
+            await EnsureRatingsLoadedAsync().ConfigureAwait(false);
 
             if (TryGetRating(imdbId, out float rating))
             {
@@ -125,7 +141,8 @@ namespace Jellyfin.Plugin.ImdbRatings
             }
 
             _ratingsCache = newCache;
-            _lastUpdated = DateTime.UtcNow;
+            _lastUpdate = DateTime.UtcNow;
+            _isLoaded = true;
             _logger.LogInformation("Finished updating IMDb rating DB. Number of entries: {0}", _ratingsCache.Count);
 
             GC.Collect();
