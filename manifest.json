@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png",
         "versions": [
             {
+                "version": "3.1.0.0",
+                "changelog": "\nchangelog\n- [a708474] refactor: improve memory footprint, do not load a second database when running the task. Reduce database size in memory from 150MB to 50MB\n- [1aabf62] refactor(mem): refactor database to use integer IDs to reduce memory footprint to about 55MB\n- [aa42c83] chore(docs): rephrase README.md\n- [d9d9ca5] clarify dataset license, add log line for database memory usage",
+                "targetAbi": "10.11.7.0",
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.1.0/imdb-ratings_3.1.0.0.zip",
+                "checksum": "35dbc9f7b1e55508f80bf6d19d616d08",
+                "timestamp": "2026-04-06T20:23:38Z"
+            },
+            {
                 "version": "3.0.0.0",
                 "changelog": "\nchangelog\n- [7d1c05e] rename to ImdbRatings\n- [e1cacc4] change displayed name to \"IMDb Ratings\"",
                 "targetAbi": "10.11.7.0",
