@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png",
         "versions": [
             {
+                "version": "3.1.1.0",
+                "changelog": "\nchangelog\n- [fa88083] fix: handle error when path is not available for a library item (gh-1)",
+                "targetAbi": "10.11.7.0",
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v3.1.1/imdb-ratings_3.1.1.0.zip",
+                "checksum": "31b093b2b296f2abc2226d1b5f5fce13",
+                "timestamp": "2026-04-10T08:18:07Z"
+            },
+            {
                 "version": "3.1.0.0",
                 "changelog": "\nchangelog\n- [a708474] refactor: improve memory footprint, do not load a second database when running the task. Reduce database size in memory from 150MB to 50MB\n- [1aabf62] refactor(mem): refactor database to use integer IDs to reduce memory footprint to about 55MB\n- [aa42c83] chore(docs): rephrase README.md\n- [d9d9ca5] clarify dataset license, add log line for database memory usage",
                 "targetAbi": "10.11.7.0",
