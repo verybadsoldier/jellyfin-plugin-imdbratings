@@ -110,6 +110,12 @@ namespace MediaBrowser.Providers.Plugins.Imdb
             // get the item related to this search info. We need it to properly get all providers and options
             var item = GetBaseItemFromPath(info.Path);
 
+            if (item == null)
+            {
+                _logger.LogWarning("Could not resolve BaseItem for path: {Path}. Cannot fetch IMDb ID.", info.Path);
+                return null;
+            }
+
             var options = _libraryManager.GetLibraryOptions(item);
             IEnumerable<IMetadataProvider<TItem>> providers = GetMetaDataProviders<TItem>(item, options);
 
