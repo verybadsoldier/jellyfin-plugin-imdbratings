@@ -11,6 +11,10 @@ description: >
 category: "General"
 owner: "verybadsoldier"
 artifacts:
-- "Jellyfin.Plugin.ImdbRatings.dll"
+  - Jellyfin.Plugin.ImdbRatings.dll
+  - Microsoft.Data.Sqlite.dll
+  - SQLitePCLRaw.core.dll
+  - SQLitePCLRaw.batteries_v2.dll
+  - SQLitePCLRaw.provider.e_sqlite3.dll
 changelog: >
   changelog

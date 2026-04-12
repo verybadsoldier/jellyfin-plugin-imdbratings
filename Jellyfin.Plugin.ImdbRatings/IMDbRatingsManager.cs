@@ -1,29 +1,23 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using ICU4N.Logging;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.ImdbRatings
 {
     /// <summary>
-    /// Manages the downloading, caching, and retrieval of IMDb ratings.
+    /// Manages the downloading, caching, and retrieval of IMDb ratings using an embedded SQLite database.
     /// </summary>
     public class IMDbRatingsManager : IDisposable
     {
         private static readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
-
-        private static Dictionary<int, float> _ratingsCache = new Dictionary<int, float>();
-        private static DateTime _lastUpdate = DateTime.MinValue;
-        private static bool _isLoaded = false;
-
         private readonly ILogger _logger;
-
+        private readonly string _dbPath;
         private bool _disposed;
 
         /// <summary>
@@ -33,47 +27,42 @@ namespace Jellyfin.Plugin.ImdbRatings
         public IMDbRatingsManager(ILogger logger)
         {
             _logger = logger;
-        }
 
-        private bool TryGetRating(string imdbId, out float rating)
-        {
-            rating = 0f;
-
-            if (string.IsNullOrWhiteSpace(imdbId) || !imdbId.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
-            {
-                _logger.LogWarning("Invalid IMDb ID '{0}'", imdbId);
-                return false;
-            }
-
-            if (int.TryParse(imdbId.AsSpan(2), out int numericId))
-            {
-                return _ratingsCache.TryGetValue(numericId, out rating);
-            }
-
-            return false;
+            // Store the database inside the Jellyfin Plugin Data folder
+            var dataPath = Plugin.Instance?.DataFolderPath ?? Path.GetTempPath();
+            _dbPath = Path.Combine(dataPath, "imdbratings.db");
         }
 
         /// <summary>
         /// Load or update the database.
         /// </summary>
         /// <returns>Task.</returns>
-        public async Task EnsureRatingsLoadedAsync()
+        public async Task PrepareDatabase()
         {
-            if (_isLoaded && (DateTime.UtcNow - _lastUpdate).TotalHours < 24)
+            // Check if the database file exists and was modified in the last 24 hours
+            if (File.Exists(_dbPath))
             {
-                return;
+                var lastWrite = File.GetLastWriteTimeUtc(_dbPath);
+                if ((DateTime.UtcNow - lastWrite).TotalHours < 24)
+                {
+                    return; // DB is fresh, skip update
+                }
             }
 
             await _updateLock.WaitAsync().ConfigureAwait(false);
             try
             {
-                // Check if DB has been updated while we waited for the lock?
-                if (_isLoaded && (DateTime.UtcNow - _lastUpdate).TotalHours < 24)
+                // Double check in case another thread updated it while we waited for the lock
+                if (File.Exists(_dbPath))
                 {
-                    return;
+                    var lastWrite = File.GetLastWriteTimeUtc(_dbPath);
+                    if ((DateTime.UtcNow - lastWrite).TotalHours < 24)
+                    {
+                        return;
+                    }
                 }
 
-                await UpdateRatingsCacheAsync().ConfigureAwait(false);
+                await RefreshDatabase().ConfigureAwait(false);
             }
             finally
             {
@@ -88,21 +77,38 @@ namespace Jellyfin.Plugin.ImdbRatings
         /// <returns>The average rating, or null if not found.</returns>
         public async Task<float?> GetRatingAsync(string imdbId)
         {
-            await EnsureRatingsLoadedAsync().ConfigureAwait(false);
+            await PrepareDatabase().ConfigureAwait(false);
 
-            if (TryGetRating(imdbId, out float rating))
+            if (string.IsNullOrWhiteSpace(imdbId) || !imdbId.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
             {
-                return rating;
+                _logger.LogWarning("Invalid IMDb ID '{0}'", imdbId);
+                return null;
+            }
+
+            if (!int.TryParse(imdbId.AsSpan(2), out int numericId))
+            {
+                return null;
+            }
+
+            // Query the database directly instead of RAM
+            using var connection = new SqliteConnection($"Data Source={_dbPath}");
+            await connection.OpenAsync().ConfigureAwait(false);
+
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT Rating FROM Ratings WHERE Id = @id";
+            command.Parameters.AddWithValue("@id", numericId);
+
+            var result = await command.ExecuteScalarAsync().ConfigureAwait(false);
+            if (result != null && result != DBNull.Value)
+            {
+                return Convert.ToSingle(result, CultureInfo.InvariantCulture);
             }
 
             return null;
         }
 
-        private async Task UpdateRatingsCacheAsync()
+        private async Task RefreshDatabase()
         {
-            GC.Collect();
-            long memoryBefore = GC.GetTotalMemory(true);
-
             string url = "https://datasets.imdbws.com/title.ratings.tsv.gz";
             using var client = new HttpClient();
 
@@ -112,9 +118,32 @@ namespace Jellyfin.Plugin.ImdbRatings
             using var gzipStream = new GZipStream(responseStream, CompressionMode.Decompress);
             using var reader = new StreamReader(gzipStream);
 
-            var newCache = new Dictionary<int, float>();
+            using var connection = new SqliteConnection($"Data Source={_dbPath}");
+            await connection.OpenAsync().ConfigureAwait(false);
 
-            await reader.ReadLineAsync().ConfigureAwait(false);
+            // Create table
+            using var createCmd = connection.CreateCommand();
+            createCmd.CommandText = "CREATE TABLE IF NOT EXISTS Ratings (Id INTEGER PRIMARY KEY, Rating REAL)";
+            await createCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+
+            using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().ConfigureAwait(false);
+
+            // Clear the old data
+            using var clearCmd = connection.CreateCommand();
+            clearCmd.Transaction = transaction;
+            clearCmd.CommandText = "DELETE FROM Ratings";
+            await clearCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+
+            // Prepare reusable insert command
+            using var insertCmd = connection.CreateCommand();
+            insertCmd.Transaction = transaction;
+            insertCmd.CommandText = "INSERT INTO Ratings (Id, Rating) VALUES (@id, @rating)";
+            var idParam = insertCmd.Parameters.Add("@id", SqliteType.Integer);
+            var ratingParam = insertCmd.Parameters.Add("@rating", SqliteType.Real);
+
+            int entryCount = 0;
+
+            await reader.ReadLineAsync().ConfigureAwait(false); // Skip header
 
             string? line;
             while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
@@ -126,7 +155,6 @@ namespace Jellyfin.Plugin.ImdbRatings
 
                     if (!imdbIdStr.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
                     {
-                        _logger.LogWarning("Invalid IMDb ID in IMDb database: '{}'", imdbIdStr);
                         continue;
                     }
 
@@ -134,22 +162,21 @@ namespace Jellyfin.Plugin.ImdbRatings
                     {
                         if (float.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out float rating))
                         {
-                            newCache[numericId] = rating;
+                            idParam.Value = numericId;
+                            ratingParam.Value = rating;
+                            await insertCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                            entryCount++;
                         }
                     }
                 }
             }
 
-            _ratingsCache = newCache;
-            _lastUpdate = DateTime.UtcNow;
-            _isLoaded = true;
-            _logger.LogInformation("Finished updating IMDb rating DB. Number of entries: {0}", _ratingsCache.Count);
+            await transaction.CommitAsync().ConfigureAwait(false);
 
-            GC.Collect();
-            long memoryAfter = GC.GetTotalMemory(true);
+            // "Touch" the file so GetLastWriteTimeUtc is reset to right now
+            File.SetLastWriteTimeUtc(_dbPath, DateTime.UtcNow);
 
-            long sizeInMegabytes = (memoryAfter - memoryBefore) / 1024 / 1024;
-            _logger.LogInformation("IMDb ratings database loaded. Memory footprint: {0} MB", sizeInMegabytes);
+            _logger.LogInformation("Finished updating IMDb rating DB. Number of entries: {0}", entryCount);
         }
 
         /// <summary>

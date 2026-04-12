@@ -101,7 +101,6 @@ jobs:
           dotnet-target: "${{ env.DOTNET_TARGET }}"
           path: '.'
           output: './artifacts'
-
       - name: Generate Artifact Name
         id: git_info
         run: |
