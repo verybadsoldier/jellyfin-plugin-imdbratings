@@ -10,6 +10,10 @@ While the source code is open source, the data source for this is the "IMDb Non-
 
 Link: https://developer.imdb.com/non-commercial-datasets/
 
+> [!IMPORTANT]
+> Version 4.0.0 Update - Drastically Reduced Memory Footprint: To make the plugin much friendlier for servers with limited resources, we've transitioned from an in-memory cache to an embedded SQLite database. The plugin now uses virtually no permanent memory while sitting idle.
+
+
 ## Features
 
 * **IMDb Community Ratings:** Automatically retrieves ratings for Movies, Series, and Episodes. 
