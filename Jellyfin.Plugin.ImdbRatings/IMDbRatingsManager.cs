@@ -30,6 +30,7 @@ namespace Jellyfin.Plugin.ImdbRatings
 
             // Store the database inside the Jellyfin Plugin Data folder
             var dataPath = Plugin.Instance?.DataFolderPath ?? Path.GetTempPath();
+            Directory.CreateDirectory(dataPath);
             _dbPath = Path.Combine(dataPath, "imdbratings.db");
         }
 
