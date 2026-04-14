@@ -54,6 +54,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
 
         public async Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)
         {
+            _logger.LogInformation("Executing task to update IMDb ratings...");
             var query = new InternalItemsQuery
             {
                 IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.Episode },
@@ -123,6 +124,8 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                 processed++;
                 progress.Report((double)processed / totalItems * 100);
             }
+
+            _logger.LogInformation("IMDb ratings update task finished");
         }
     }
 }

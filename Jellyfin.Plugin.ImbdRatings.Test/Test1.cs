@@ -17,6 +17,8 @@ namespace Jellyfin.Plugin.ImbdRatings.Test
             var fakeLogger = new FakeLogger<ILogger>();
             var m = new IMDbRatingsManager(fakeLogger);
 
+            m.DeleteDatabse();
+
             await m.PrepareDatabase();
 
             // Programmatically generate 100 IDs (tt0000001 through tt0000100)

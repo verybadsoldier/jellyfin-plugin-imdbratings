@@ -34,6 +34,14 @@ namespace Jellyfin.Plugin.ImdbRatings
         }
 
         /// <summary>
+        /// Delete the database file.
+        /// </summary>
+        public void DeleteDatabse()
+        {
+            File.Delete(_dbPath);
+        }
+
+        /// <summary>
         /// Load or update the database.
         /// </summary>
         /// <returns>Task.</returns>
@@ -109,6 +117,9 @@ namespace Jellyfin.Plugin.ImdbRatings
 
         private async Task RefreshDatabase()
         {
+            // delete database in case an old, incompatible file is still there
+            DeleteDatabse();
+
             string url = "https://datasets.imdbws.com/title.ratings.tsv.gz";
             using var client = new HttpClient();
 
@@ -118,6 +129,7 @@ namespace Jellyfin.Plugin.ImdbRatings
             using var gzipStream = new GZipStream(responseStream, CompressionMode.Decompress);
             using var reader = new StreamReader(gzipStream);
 
+            _logger.LogInformation("Opening database from path: {0}", _dbPath);
             using var connection = new SqliteConnection($"Data Source={_dbPath}");
             await connection.OpenAsync().ConfigureAwait(false);
 
@@ -148,25 +160,34 @@ namespace Jellyfin.Plugin.ImdbRatings
             string? line;
             while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
             {
-                var parts = line.Split('\t');
-                if (parts.Length >= 2)
+                // 1. Treat the line as a mathematical window in memory
+                ReadOnlySpan<char> span = line.AsSpan();
+
+                // 2. Find the first tab character
+                int firstTab = span.IndexOf('\t');
+                if (firstTab < 0)
                 {
-                    string imdbIdStr = parts[0];
+                    continue;
+                }
 
-                    if (!imdbIdStr.StartsWith("tt", StringComparison.OrdinalIgnoreCase))
-                    {
-                        continue;
-                    }
+                // 3. Slice the window to get the ID and the rest of the line
+                ReadOnlySpan<char> idSpan = span.Slice(0, firstTab);
+                ReadOnlySpan<char> remainder = span.Slice(firstTab + 1);
 
-                    if (int.TryParse(imdbIdStr.AsSpan(2), out int numericId))
+                // 4. Find the second tab character
+                int secondTab = remainder.IndexOf('\t');
+                ReadOnlySpan<char> ratingSpan = secondTab >= 0 ? remainder.Slice(0, secondTab) : remainder;
+
+                // 5. Parse the spans directly into numbers
+                if (idSpan.StartsWith("tt") && int.TryParse(idSpan.Slice(2), out int numericId))
+                {
+                    if (float.TryParse(ratingSpan, NumberStyles.Any, CultureInfo.InvariantCulture, out float rating))
                     {
-                        if (float.TryParse(parts[1], NumberStyles.Any, CultureInfo.InvariantCulture, out float rating))
-                        {
-                            idParam.Value = numericId;
-                            ratingParam.Value = rating;
-                            await insertCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-                            entryCount++;
-                        }
+                        // Insert into database
+                        idParam.Value = numericId;
+                        ratingParam.Value = rating;
+                        await insertCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                        entryCount++;
                     }
                 }
             }
