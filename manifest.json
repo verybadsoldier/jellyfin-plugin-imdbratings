@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png",
         "versions": [
             {
+                "version": "4.0.1.0",
+                "changelog": "\nchangelog\n- [39b6977] fix: make sure the data directory exists",
+                "targetAbi": "10.11.7.0",
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v4.0.1/imdb-ratings_4.0.1.0.zip",
+                "checksum": "8c6feb11f34a43fe30609076fc20bcf8",
+                "timestamp": "2026-04-14T19:55:07Z"
+            },
+            {
                 "version": "3.1.1.0",
                 "changelog": "\nchangelog\n- [fa88083] fix: handle error when path is not available for a library item (gh-1)",
                 "targetAbi": "10.11.7.0",
