@@ -118,8 +118,11 @@ namespace Jellyfin.Plugin.ImdbRatings
 
         private async Task RefreshDatabase()
         {
-            // delete database in case an old, incompatible file is still there
-            DeleteDatabse();
+            string tempDbPath = _dbPath + ".tmp";
+            if (File.Exists(tempDbPath))
+            {
+                File.Delete(tempDbPath);
+            }
 
             string url = "https://datasets.imdbws.com/title.ratings.tsv.gz";
             using var client = new HttpClient();
@@ -130,70 +133,69 @@ namespace Jellyfin.Plugin.ImdbRatings
             using var gzipStream = new GZipStream(responseStream, CompressionMode.Decompress);
             using var reader = new StreamReader(gzipStream);
 
-            _logger.LogInformation("Opening database from path: {0}", _dbPath);
-            using var connection = new SqliteConnection($"Data Source={_dbPath}");
-            await connection.OpenAsync().ConfigureAwait(false);
-
-            // Create table
-            using var createCmd = connection.CreateCommand();
-            createCmd.CommandText = "CREATE TABLE IF NOT EXISTS Ratings (Id INTEGER PRIMARY KEY, Rating REAL)";
-            await createCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-
-            using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().ConfigureAwait(false);
-
-            // Clear the old data
-            using var clearCmd = connection.CreateCommand();
-            clearCmd.Transaction = transaction;
-            clearCmd.CommandText = "DELETE FROM Ratings";
-            await clearCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-
-            // Prepare reusable insert command
-            using var insertCmd = connection.CreateCommand();
-            insertCmd.Transaction = transaction;
-            insertCmd.CommandText = "INSERT INTO Ratings (Id, Rating) VALUES (@id, @rating)";
-            var idParam = insertCmd.Parameters.Add("@id", SqliteType.Integer);
-            var ratingParam = insertCmd.Parameters.Add("@rating", SqliteType.Real);
+            _logger.LogInformation("Opening temporary database from path: {0}", tempDbPath);
 
             int entryCount = 0;
 
-            await reader.ReadLineAsync().ConfigureAwait(false); // Skip header
-
-            string? line;
-            while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
+            using (var connection = new SqliteConnection($"Data Source={tempDbPath}"))
             {
-                // 1. Treat the line as a mathematical window in memory
-                ReadOnlySpan<char> span = line.AsSpan();
+                await connection.OpenAsync().ConfigureAwait(false);
 
-                // 2. Find the first tab character
-                int firstTab = span.IndexOf('\t');
-                if (firstTab < 0)
+                // Create table
+                using var createCmd = connection.CreateCommand();
+                createCmd.CommandText = "CREATE TABLE IF NOT EXISTS Ratings (Id INTEGER PRIMARY KEY, Rating REAL)";
+                await createCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+
+                using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync().ConfigureAwait(false);
+
+                // Prepare reusable insert command
+                using var insertCmd = connection.CreateCommand();
+                insertCmd.Transaction = transaction;
+                insertCmd.CommandText = "INSERT INTO Ratings (Id, Rating) VALUES (@id, @rating)";
+                var idParam = insertCmd.Parameters.Add("@id", SqliteType.Integer);
+                var ratingParam = insertCmd.Parameters.Add("@rating", SqliteType.Real);
+
+                await reader.ReadLineAsync().ConfigureAwait(false); // Skip header
+
+                string? line;
+                while ((line = await reader.ReadLineAsync().ConfigureAwait(false)) != null)
                 {
-                    continue;
-                }
+                    // 1. Treat the line as a mathematical window in memory
+                    ReadOnlySpan<char> span = line.AsSpan();
 
-                // 3. Slice the window to get the ID and the rest of the line
-                ReadOnlySpan<char> idSpan = span.Slice(0, firstTab);
-                ReadOnlySpan<char> remainder = span.Slice(firstTab + 1);
-
-                // 4. Find the second tab character
-                int secondTab = remainder.IndexOf('\t');
-                ReadOnlySpan<char> ratingSpan = secondTab >= 0 ? remainder.Slice(0, secondTab) : remainder;
-
-                // 5. Parse the spans directly into numbers
-                if (idSpan.StartsWith("tt") && int.TryParse(idSpan.Slice(2), out int numericId))
-                {
-                    if (float.TryParse(ratingSpan, NumberStyles.Any, CultureInfo.InvariantCulture, out float rating))
+                    // 2. Find the first tab character
+                    int firstTab = span.IndexOf('\t');
+                    if (firstTab < 0)
                     {
-                        // Insert into database
-                        idParam.Value = numericId;
-                        ratingParam.Value = rating;
-                        await insertCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
-                        entryCount++;
+                        continue;
+                    }
+
+                    // 3. Slice the window to get the ID and the rest of the line
+                    ReadOnlySpan<char> idSpan = span.Slice(0, firstTab);
+                    ReadOnlySpan<char> remainder = span.Slice(firstTab + 1);
+
+                    // 4. Find the second tab character
+                    int secondTab = remainder.IndexOf('\t');
+                    ReadOnlySpan<char> ratingSpan = secondTab >= 0 ? remainder.Slice(0, secondTab) : remainder;
+
+                    // 5. Parse the spans directly into numbers
+                    if (idSpan.StartsWith("tt") && int.TryParse(idSpan.Slice(2), out int numericId))
+                    {
+                        if (float.TryParse(ratingSpan, NumberStyles.Any, CultureInfo.InvariantCulture, out float rating))
+                        {
+                            // Insert into database
+                            idParam.Value = numericId;
+                            ratingParam.Value = rating;
+                            await insertCmd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                            entryCount++;
+                        }
                     }
                 }
+
+                await transaction.CommitAsync().ConfigureAwait(false);
             }
 
-            await transaction.CommitAsync().ConfigureAwait(false);
+            File.Move(tempDbPath, _dbPath, true);
 
             // "Touch" the file so GetLastWriteTimeUtc is reset to right now
             File.SetLastWriteTimeUtc(_dbPath, DateTime.UtcNow);
