@@ -70,77 +70,6 @@ namespace MediaBrowser.Providers.Plugins.Imdb
         // After primary option
         public int Order => 2;
 
-        private BaseItem GetBaseItemFromPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return null;
-            }
-
-            var query = new InternalItemsQuery
-            {
-                Path = path,
-                IncludeItemTypes = new[] { BaseItemKind.Movie, BaseItemKind.Series, BaseItemKind.Episode },
-                Limit = 1 // We only need the first match
-            };
-
-            var result = _libraryManager.GetItemList(query);
-
-            return result.Count > 0 ? result[0] : null;
-        }
-
-        private IEnumerable<IMetadataProvider<TItem>> GetMetaDataProviders<TItem>(BaseItem item, LibraryOptions options)
-            where TItem : BaseItem, new()
-        {
-            var providerType = _providerManager.GetType();
-            var metGetMeta = providerType.GetMethod("GetMetadataProviders");
-
-            MethodInfo genMetGetMeta = metGetMeta.MakeGenericMethod(typeof(TItem));
-
-            return (IEnumerable<IMetadataProvider<TItem>>)genMetGetMeta.Invoke(_providerManager, new object[] { item, options });
-        }
-
-        /*
-         * Use other providers to obtain IMDb ID
-         */
-        private async Task<string> GetImdbId<TItem, TInfo>(TInfo info, CancellationToken cancellationToken)
-            where TItem : BaseItem, IHasLookupInfo<TInfo>, new()
-            where TInfo : ItemLookupInfo, new()
-        {
-            // get the item related to this search info. We need it to properly get all providers and options
-            var item = GetBaseItemFromPath(info.Path);
-
-            if (item == null)
-            {
-                _logger.LogWarning("Could not resolve BaseItem for path: {Path}. Cannot fetch IMDb ID.", info.Path);
-                return null;
-            }
-
-            var options = _libraryManager.GetLibraryOptions(item);
-            IEnumerable<IMetadataProvider<TItem>> providers = GetMetaDataProviders<TItem>(item, options);
-
-            // filter for provides that can handle this media type and also ignore ourselves
-            var providerList = providers.OfType<IRemoteMetadataProvider<TItem, TInfo>>().Where(x => x != this).ToList();
-
-            foreach (var provider in providerList)
-            {
-                MetadataResult<TItem> localItem = await provider.GetMetadata(info, cancellationToken).ConfigureAwait(false);
-
-                if (localItem.HasMetadata)
-                {
-                    var id = localItem.Item.GetProviderId(MetadataProvider.Imdb);
-                    if (id != null)
-                    {
-                        return id;
-                    }
-                }
-            }
-
-            _logger.LogWarning("Could not get an IMDb ID for ítem: {Item}", item.Path);
-
-            return null;
-        }
-
         private async Task<MetadataResult<TBase>> GetResult<TBase, TLookupInfo>(TLookupInfo info, CancellationToken cancellationToken)
                         where TBase : BaseItem, IHasLookupInfo<TLookupInfo>, new()
                         where TLookupInfo : ItemLookupInfo, new()
@@ -153,12 +82,7 @@ namespace MediaBrowser.Providers.Plugins.Imdb
             };
 
             var imdbId = info.GetProviderId(MetadataProvider.Imdb);
-            if (imdbId == null)
-            {
-                imdbId = await GetImdbId<TBase, TLookupInfo>(info, cancellationToken).ConfigureAwait(false);
-            }
-
-            if (imdbId == null)
+            if (string.IsNullOrWhiteSpace(imdbId))
             {
                 return result;
             }
@@ -167,8 +91,12 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
             _logger.LogInformation("Fetched IMDb rating for ID '{0}': {1}", imdbId, rating);
 
-            result.Item.CommunityRating = rating;
-            result.HasMetadata = true;
+            if (rating.HasValue)
+            {
+                result.Item.CommunityRating = rating;
+                result.HasMetadata = true;
+            }
+
             return result;
         }
 

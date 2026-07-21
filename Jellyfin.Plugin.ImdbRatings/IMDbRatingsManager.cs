@@ -116,9 +116,19 @@ namespace Jellyfin.Plugin.ImdbRatings
             return null;
         }
 
+        private void ClearDatabasePool(string dbPath)
+        {
+            using var conn = new SqliteConnection($"Data Source={dbPath}");
+            SqliteConnection.ClearPool(conn);
+        }
+
         private async Task RefreshDatabase()
         {
             string tempDbPath = _dbPath + ".tmp";
+
+            // Clear pool for temp database just in case a previous run left connections open
+            ClearDatabasePool(tempDbPath);
+
             if (File.Exists(tempDbPath))
             {
                 File.Delete(tempDbPath);
@@ -137,7 +147,8 @@ namespace Jellyfin.Plugin.ImdbRatings
 
             int entryCount = 0;
 
-            using (var connection = new SqliteConnection($"Data Source={tempDbPath}"))
+            // Use Pooling=False to ensure the file is closed immediately when disposed
+            using (var connection = new SqliteConnection($"Data Source={tempDbPath};Pooling=False"))
             {
                 await connection.OpenAsync().ConfigureAwait(false);
 
@@ -194,6 +205,9 @@ namespace Jellyfin.Plugin.ImdbRatings
 
                 await transaction.CommitAsync().ConfigureAwait(false);
             }
+
+            // Clear the connection pool for the main database before replacing it
+            ClearDatabasePool(_dbPath);
 
             File.Move(tempDbPath, _dbPath, true);
 
