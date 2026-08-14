@@ -16,20 +16,40 @@ Link: https://developer.imdb.com/non-commercial-datasets/
 
 ## Features
 
-* **IMDb Community Ratings:** Automatically retrieves ratings for Movies, Series, and Episodes. 
+* **IMDb Community Ratings:** Automatically retrieves ratings for Movies, Series, and Episodes.
+* **Calculated Season Ratings:** Calculates the average IMDb rating for whole seasons based on their episodes (as IMDb only provides episode-level ratings). Enabled directly via your library options under **Season metadata downloaders**.
 * **Official Data Source:** Downloads and caches the official IMDb ratings dataset (`title.ratings.tsv.gz`) directly from IMDb to provide fast, local lookups without web scraping or API rate limits.
 * **Provider Integration:** Acts as a seamless Remote Metadata Provider ("The Internet Movie Database Ratings") that integrates gracefully into Jellyfin's existing metadata refresh pipeline.
 * **Automatic Background Updates:** Includes a built-in scheduler task to keep your library's ratings up-to-date as IMDb scores change over time (defaults to every day at 3 AM).
+* **Plugin Configuration & Status Dashboard:** View live database statistics (number of indexed ratings, file size, last updated time), trigger manual dataset refreshes, and customize cache expiration, minimum episode rating threshold (%), and mirror dataset URLs.
 
 ## How It Works
 
 The plugin matches your media's existing IMDb ID against the cached IMDb ratings database. If a match is found, the plugin applies the current IMDb community rating to your media item. 
 
-To ensure optimal performance, the plugin caches the IMDb ratings flat file and only refreshes it from the internet if the local data is older than 24 hours.
+To ensure optimal performance, the plugin caches the IMDb ratings flat file in a local SQLite database and only refreshes it from the internet once the configured cache interval (default: 24 hours) has elapsed.
 
 ## How To Use
 
-It's easy: Just enable the plugin in your movie or TV show libraries if your choice. IMDb ratings will be added to your media when adding new media or re-scanning existing libraries.
+1. Navigate to **Dashboard -> Libraries** in Jellyfin.
+2. Click on your Movie or TV Show library.
+3. Under the metadata downloaders section, enable **The Internet Movie Database Ratings** for the item types you want:
+   * **Movie metadata downloaders**
+   * **Series metadata downloaders**
+   * **Season metadata downloaders** *(calculates season ratings from episode ratings)*
+   * **Episode metadata downloaders**
+4. **Important (Order Dependency):** Ensure **The Internet Movie Database Ratings** is placed **last at the bottom of the list** for each item type (below primary fetchers like TheMovieDb, TheTVDB, or OMDb). This ensures the primary fetcher retrieves and saves the IMDb ID (`tt...`) first, so this plugin can immediately look up and apply the rating during the same scan.
+5. Save your settings and re-scan your library or refresh metadata.
+
+## Plugin Configuration Page
+
+Navigate to **Dashboard -> Plugins -> IMDb Ratings** to view the status dashboard and customize settings:
+
+* **Live Status:** Displays whether the database is ready or updating, the number of ratings indexed, the database size on disk, and the last update timestamp.
+* **Refresh Database Now:** Trigger an immediate re-download and re-index of the IMDb ratings dataset.
+* **Cache Refresh Interval (Hours):** How often to check for a newer dataset from IMDb (default: 24 hours).
+* **Minimum Episode Rating Threshold for Seasons (%):** The minimum percentage (0–100%) of rated episodes required in a season before calculating and assigning an average rating to the season (default: 0%).
+* **Custom Dataset URL:** Use a custom mirror or proxy if needed (default: `https://datasets.imdbws.com/title.ratings.tsv.gz`).
 
 ## Important Notes & Prerequisites
 
@@ -41,7 +61,7 @@ It's easy: Just enable the plugin in your movie or TV show libraries if your cho
 
 To ensure your media ratings don't become stale, this plugin registers a custom Scheduled Task within Jellyfin. 
 
-* **What it does:** The task scans your library for all Movies, Series, and Episodes that have an associated IMDb ID. It then checks the locally cached IMDb database for the latest community rating and updates your media item if the rating has changed.
+* **What it does:** The task scans your library for all Movies, Series, Episodes, and Seasons that have the provider enabled in their library options. It updates ratings for movies, series, and episodes using the cached database, and calculates season averages from episodes.
 * **Default Schedule:** By default, the task is configured to run automatically **every day at 3:00 AM**.
 * **Manual Execution:** You can manually trigger this task at any time or change its schedule by navigating to **Dashboard -> Scheduled Tasks -> Library -> Update IMDb Ratings** in your Jellyfin server interface.
 

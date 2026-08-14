@@ -41,7 +41,8 @@ using static MediaBrowser.Providers.Plugins.Imdb.ImdbItemProvider;
 namespace MediaBrowser.Providers.Plugins.Imdb
 {
     public class ImdbItemProvider : IRemoteMetadataProvider<Series, SeriesInfo>,
-        IRemoteMetadataProvider<Movie, MovieInfo>, IRemoteMetadataProvider<Episode, EpisodeInfo>, IHasOrder, IDisposable
+        IRemoteMetadataProvider<Movie, MovieInfo>, IRemoteMetadataProvider<Episode, EpisodeInfo>,
+        IRemoteMetadataProvider<Season, SeasonInfo>, ICustomMetadataProvider<Season>, IHasOrder, IDisposable
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILibraryManager _libraryManager;
@@ -67,8 +68,8 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
         public string Name => "The Internet Movie Database Ratings";
 
-        // After primary option
-        public int Order => 2;
+        // Run after all primary metadata fetchers (TMDb, TheTVDB, OMDb, etc.) so IMDb IDs are already populated
+        public int Order => 100;
 
         private async Task<MetadataResult<TBase>> GetResult<TBase, TLookupInfo>(TLookupInfo info, CancellationToken cancellationToken)
                         where TBase : BaseItem, IHasLookupInfo<TLookupInfo>, new()
@@ -115,6 +116,43 @@ namespace MediaBrowser.Providers.Plugins.Imdb
             return GetResult<Episode, EpisodeInfo>(info, cancellationToken);
         }
 
+        public Task<MetadataResult<Season>> GetMetadata(SeasonInfo info, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new MetadataResult<Season>
+            {
+                QueriedById = true,
+                Item = new Season(),
+                HasMetadata = false
+            });
+        }
+
+        public Task<ItemUpdateType> FetchAsync(Season item, MetadataRefreshOptions options, CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(item);
+
+            var episodes = item.GetEpisodes().OfType<Episode>().ToList();
+            if (episodes.Count == 0)
+            {
+                episodes = _libraryManager.GetItemList(new InternalItemsQuery
+                {
+                    ParentId = item.Id,
+                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    IsVirtualItem = false
+                }).OfType<Episode>().ToList();
+            }
+
+            int minPercentage = Plugin.Instance?.Configuration.MinEpisodePercentageForSeasonRating ?? 0;
+            var avgRating = SeasonRatingCalculator.CalculateAverageRating(episodes, minPercentage);
+            if (avgRating.HasValue && item.CommunityRating != avgRating.Value)
+            {
+                _logger.LogInformation("Calculated average IMDb rating {Rating} for season '{SeasonName}' from episodes", avgRating.Value, item.Name);
+                item.CommunityRating = avgRating.Value;
+                return Task.FromResult(ItemUpdateType.MetadataEdit);
+            }
+
+            return Task.FromResult(ItemUpdateType.None);
+        }
+
         public Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeriesInfo searchInfo, CancellationToken cancellationToken)
         {
             return GetSearchResultsInternal(searchInfo, true, cancellationToken);
@@ -126,6 +164,11 @@ namespace MediaBrowser.Providers.Plugins.Imdb
         }
 
         public Task<IEnumerable<RemoteSearchResult>> GetSearchResults(EpisodeInfo searchInfo, CancellationToken cancellationToken)
+        {
+            return GetSearchResultsInternal(searchInfo, true, cancellationToken);
+        }
+
+        public Task<IEnumerable<RemoteSearchResult>> GetSearchResults(SeasonInfo searchInfo, CancellationToken cancellationToken)
         {
             return GetSearchResultsInternal(searchInfo, true, cancellationToken);
         }

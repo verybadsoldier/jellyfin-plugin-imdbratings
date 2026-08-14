@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.ImdbRatings;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Tasks;
@@ -36,7 +37,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
 
         public string Key => "UpdateImdbRatingsTask";
 
-        public string Description => "Regularly updates the IMDb community ratings for all movies, series, and episodes.";
+        public string Description => "Regularly updates the IMDb community ratings for movies, series, seasons, and episodes.";
 
         public string Category => "Library";
 
@@ -62,7 +63,14 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
             };
 
             var items = _libraryManager.GetItemList(query);
-            int totalItems = items.Count;
+            var seasonQuery = new InternalItemsQuery
+            {
+                IncludeItemTypes = new[] { BaseItemKind.Season },
+                IsVirtualItem = false
+            };
+
+            var seasons = _libraryManager.GetItemList(seasonQuery).OfType<Season>().ToList();
+            int totalItems = items.Count + seasons.Count;
             int processed = 0;
 
             // Instantiate the manager once outside the loop
@@ -119,6 +127,64 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                     {
                         _logger.LogError(ex, "Error updating rating for {Name}", item.Name);
                     }
+                }
+
+                processed++;
+                progress.Report((double)processed / totalItems * 100);
+            }
+
+            _logger.LogInformation("Calculating IMDb ratings for {Count} seasons...", seasons.Count);
+
+            foreach (var season in seasons)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                bool isProviderEnabled = false;
+                var options = _libraryManager.GetLibraryOptions(season);
+                if (options != null)
+                {
+                    var seasonOptions = options.TypeOptions?.FirstOrDefault(t =>
+                        string.Equals(t.Type, "Season", StringComparison.OrdinalIgnoreCase));
+
+                    if (seasonOptions != null && seasonOptions.MetadataFetchers != null)
+                    {
+                        isProviderEnabled = seasonOptions.MetadataFetchers.Contains(
+                            providerName, StringComparer.OrdinalIgnoreCase);
+                    }
+                }
+
+                if (!isProviderEnabled)
+                {
+                    processed++;
+                    progress.Report((double)processed / totalItems * 100);
+                    continue;
+                }
+
+                try
+                {
+                    var episodes = season.GetEpisodes().OfType<Episode>().ToList();
+                    if (episodes.Count == 0)
+                    {
+                        episodes = _libraryManager.GetItemList(new InternalItemsQuery
+                        {
+                            ParentId = season.Id,
+                            IncludeItemTypes = new[] { BaseItemKind.Episode },
+                            IsVirtualItem = false
+                        }).OfType<Episode>().ToList();
+                    }
+
+                    int minPercentage = Plugin.Instance?.Configuration.MinEpisodePercentageForSeasonRating ?? 0;
+                    var avgRating = SeasonRatingCalculator.CalculateAverageRating(episodes, minPercentage);
+                    if (avgRating.HasValue && season.CommunityRating != avgRating.Value)
+                    {
+                        _logger.LogInformation("Updating calculated IMDb rating for season '{Name}' from {OldRating} to {NewRating}", season.Name, season.CommunityRating, avgRating.Value);
+                        season.CommunityRating = avgRating.Value;
+                        await season.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error updating calculated rating for season {Name}", season.Name);
                 }
 
                 processed++;

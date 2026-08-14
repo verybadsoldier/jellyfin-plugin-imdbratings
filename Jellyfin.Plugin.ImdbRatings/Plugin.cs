@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using Jellyfin.Plugin.Template.Configuration;
+using Jellyfin.Plugin.ImdbRatings.Configuration;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
@@ -39,7 +39,7 @@ namespace Jellyfin.Plugin.ImdbRatings
         /// <summary>
         /// Gets Description.
         /// </summary>
-        public override string Description => "Get ratings for movies and episodes from IMDb.";
+        public override string Description => "Get ratings for movies, series, seasons, and episodes from IMDb.";
 
         /// <inheritdoc />
         public IEnumerable<PluginPageInfo> GetPages()

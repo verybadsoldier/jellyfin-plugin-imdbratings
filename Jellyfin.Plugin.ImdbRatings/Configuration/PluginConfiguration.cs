@@ -1,22 +1,6 @@
 using MediaBrowser.Model.Plugins;
 
-namespace Jellyfin.Plugin.Template.Configuration;
-
-/// <summary>
-/// The configuration options.
-/// </summary>
-public enum SomeOptions
-{
-    /// <summary>
-    /// Option one.
-    /// </summary>
-    OneOption,
-
-    /// <summary>
-    /// Second option.
-    /// </summary>
-    AnotherOption
-}
+namespace Jellyfin.Plugin.ImdbRatings.Configuration;
 
 /// <summary>
 /// Plugin configuration.
@@ -28,30 +12,23 @@ public class PluginConfiguration : BasePluginConfiguration
     /// </summary>
     public PluginConfiguration()
     {
-        // set default options here
-        Options = SomeOptions.AnotherOption;
-        TrueFalseSetting = true;
-        AnInteger = 2;
-        AString = "string";
+        DatabaseRefreshIntervalHours = 24;
+        MinEpisodePercentageForSeasonRating = 0;
+        DatasetUrl = "https://datasets.imdbws.com/title.ratings.tsv.gz";
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether some true or false setting is enabled..
+    /// Gets or sets the database refresh interval in hours before re-downloading the IMDb ratings dataset.
     /// </summary>
-    public bool TrueFalseSetting { get; set; }
+    public int DatabaseRefreshIntervalHours { get; set; }
 
     /// <summary>
-    /// Gets or sets an integer setting.
+    /// Gets or sets the minimum percentage of rated episodes (0-100) required to calculate a season rating.
     /// </summary>
-    public int AnInteger { get; set; }
+    public int MinEpisodePercentageForSeasonRating { get; set; }
 
     /// <summary>
-    /// Gets or sets a string setting.
+    /// Gets or sets the URL to download the IMDb title ratings dataset from.
     /// </summary>
-    public string AString { get; set; }
-
-    /// <summary>
-    /// Gets or sets an enum option.
-    /// </summary>
-    public SomeOptions Options { get; set; }
+    public string DatasetUrl { get; set; }
 }

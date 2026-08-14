@@ -2,37 +2,122 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Template</title>
+    <title>IMDb Ratings</title>
 </head>
 <body>
-    <div id="TemplateConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div id="ImdbRatingsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
         <div data-role="content">
             <div class="content-primary">
-                <form id="TemplateConfigForm">
-                    <div class="selectContainer">
-                        <label class="selectLabel" for="Options">Several Options</label>
-                        <select is="emby-select" id="Options" name="Options" class="emby-select-withcolor emby-select">
-                            <option id="optOneOption" value="OneOption">One Option</option>
-                            <option id="optAnotherOption" value="AnotherOption">Another Option</option>
-                        </select>
+                <style>
+                    .imdb-status-card {
+                        background: rgba(120, 120, 120, 0.1);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 8px;
+                        padding: 1.25em;
+                        margin-bottom: 2em;
+                    }
+                    .imdb-status-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                        gap: 1em;
+                        margin: 1em 0;
+                    }
+                    .imdb-stat-box {
+                        background: rgba(0, 0, 0, 0.2);
+                        padding: 0.85em;
+                        border-radius: 6px;
+                        border-left: 3px solid #00a4dc;
+                    }
+                    .imdb-stat-title {
+                        font-size: 0.8em;
+                        color: #bbb;
+                        margin-bottom: 0.3em;
+                    }
+                    .imdb-stat-value {
+                        font-size: 1.2em;
+                        font-weight: bold;
+                    }
+                    .imdb-badge {
+                        display: inline-block;
+                        padding: 0.25em 0.6em;
+                        border-radius: 4px;
+                        font-size: 0.85em;
+                        font-weight: bold;
+                    }
+                    .imdb-badge-ready {
+                        background: rgba(46, 204, 113, 0.25);
+                        color: #2ecc71;
+                        border: 1px solid #2ecc71;
+                    }
+                    .imdb-badge-updating {
+                        background: rgba(241, 196, 15, 0.25);
+                        color: #f1c40f;
+                        border: 1px solid #f1c40f;
+                    }
+                    .imdb-badge-missing {
+                        background: rgba(231, 76, 60, 0.25);
+                        color: #e74c3c;
+                        border: 1px solid #e74c3c;
+                    }
+                </style>
+
+                <!-- Database Status Section -->
+                <div class="imdb-status-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5em;">
+                        <h2 style="margin: 0; font-size: 1.2em;">IMDb SQLite Database Status</h2>
+                        <span id="imdbStatusBadge" class="imdb-badge imdb-badge-missing">Checking...</span>
                     </div>
+
+                    <div class="imdb-status-grid">
+                        <div class="imdb-stat-box">
+                            <div class="imdb-stat-title">Ratings Indexed</div>
+                            <div id="imdbStatCount" class="imdb-stat-value">-</div>
+                        </div>
+                        <div class="imdb-stat-box">
+                            <div class="imdb-stat-title">Database Size</div>
+                            <div id="imdbStatSize" class="imdb-stat-value">-</div>
+                        </div>
+                        <div class="imdb-stat-box">
+                            <div class="imdb-stat-title">Last Updated</div>
+                            <div id="imdbStatLastUpdated" class="imdb-stat-value">-</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1em; display: flex; align-items: center; gap: 1em; flex-wrap: wrap;">
+                        <button id="btnRefreshDb" is="emby-button" type="button" class="raised emby-button">
+                            <span>Refresh Database Now</span>
+                        </button>
+                        <span id="refreshStatusMessage" style="font-size: 0.9em; color: #aaa;"></span>
+                    </div>
+                </div>
+
+                <!-- Settings Form -->
+                <form id="ImdbRatingsConfigForm">
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AnInteger">An Integer</label>
-                        <input id="AnInteger" name="AnInteger" type="number" is="emby-input" min="0" />
-                        <div class="fieldDescription">A Description</div>
+                        <label class="inputLabel inputLabelUnfocused" for="DatabaseRefreshIntervalHours">Cache Refresh Interval (Hours)</label>
+                        <input id="DatabaseRefreshIntervalHours" name="DatabaseRefreshIntervalHours" type="number" is="emby-input" min="1" max="720" required />
+                        <div class="fieldDescription">
+                            How often (in hours) the local IMDb ratings dataset cache should be refreshed from the remote source. Default is 24 hours.
+                        </div>
                     </div>
-                    <div class="checkboxContainer checkboxContainer-withDescription">
-                        <label class="emby-checkbox-label">
-                            <input id="TrueFalseSetting" name="TrueFalseCheckBox" type="checkbox" is="emby-checkbox" />
-                            <span>A Checkbox</span>
-                        </label>
-                    </div>
+
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="AString">A String</label>
-                        <input id="AString" name="AString" type="text" is="emby-input" />
-                        <div class="fieldDescription">Another Description</div>
+                        <label class="inputLabel inputLabelUnfocused" for="MinEpisodePercentageForSeasonRating">Minimum Episode Rating Threshold for Seasons (%)</label>
+                        <input id="MinEpisodePercentageForSeasonRating" name="MinEpisodePercentageForSeasonRating" type="number" is="emby-input" min="0" max="100" required />
+                        <div class="fieldDescription">
+                            When "The Internet Movie Database Ratings" is enabled for <b>Seasons</b> in your TV library settings, this defines the minimum percentage (0-100%) of rated episodes required in a season before calculating the season's average rating. Set to 0 to calculate whenever at least 1 episode is rated.
+                        </div>
                     </div>
-                    <div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="DatasetUrl">IMDb Dataset URL</label>
+                        <input id="DatasetUrl" name="DatasetUrl" type="url" is="emby-input" />
+                        <div class="fieldDescription">
+                            URL to download the IMDb title ratings gzip file from. Default: <code>https://datasets.imdbws.com/title.ratings.tsv.gz</code>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 2em;">
                         <button is="emby-button" type="submit" class="raised button-submit block emby-button">
                             <span>Save</span>
                         </button>
@@ -41,38 +126,102 @@
             </div>
         </div>
         <script type="text/javascript">
-            var TemplateConfig = {
-                pluginUniqueId: 'eb5d7894-8eef-4b36-aa6f-5d124e828ce1'
+            var ImdbRatingsConfig = {
+                pluginUniqueId: '12418add-9a9d-422d-8e35-dde91cf5baf9'
             };
 
-            document.querySelector('#TemplateConfigPage')
+            function formatBytes(bytes) {
+                if (!bytes || bytes === 0) return '0 B';
+                var k = 1024;
+                var sizes = ['B', 'KB', 'MB', 'GB'];
+                var i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function loadStatus() {
+                var statusUrl = ApiClient.getUrl('Plugins/ImdbRatings/Status');
+                ApiClient.getJSON(statusUrl).then(function(status) {
+                    var badge = document.querySelector('#imdbStatusBadge');
+                    var countElem = document.querySelector('#imdbStatCount');
+                    var sizeElem = document.querySelector('#imdbStatSize');
+                    var lastUpdatedElem = document.querySelector('#imdbStatLastUpdated');
+
+                    if (status.IsUpdating) {
+                        badge.textContent = 'Updating...';
+                        badge.className = 'imdb-badge imdb-badge-updating';
+                    } else if (status.DatabaseExists && status.TotalRatings > 0) {
+                        badge.textContent = 'Ready';
+                        badge.className = 'imdb-badge imdb-badge-ready';
+                    } else {
+                        badge.textContent = 'Not Downloaded';
+                        badge.className = 'imdb-badge imdb-badge-missing';
+                    }
+
+                    countElem.textContent = status.TotalRatings != null ? status.TotalRatings.toLocaleString() : '-';
+                    sizeElem.textContent = formatBytes(status.SizeBytes);
+
+                    if (status.LastModifiedUtc) {
+                        var date = new Date(status.LastModifiedUtc);
+                        lastUpdatedElem.textContent = date.toLocaleString();
+                    } else {
+                        lastUpdatedElem.textContent = 'Never';
+                    }
+                }).catch(function() {
+                    var badge = document.querySelector('#imdbStatusBadge');
+                    if (badge) {
+                        badge.textContent = 'Status Unavailable';
+                        badge.className = 'imdb-badge imdb-badge-missing';
+                    }
+                });
+            }
+
+            document.querySelector('#ImdbRatingsConfigPage')
                 .addEventListener('pageshow', function() {
                     Dashboard.showLoadingMsg();
-                    ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                        document.querySelector('#Options').value = config.Options;
-                        document.querySelector('#AnInteger').value = config.AnInteger;
-                        document.querySelector('#TrueFalseSetting').checked = config.TrueFalseSetting;
-                        document.querySelector('#AString').value = config.AString;
+                    ApiClient.getPluginConfiguration(ImdbRatingsConfig.pluginUniqueId).then(function (config) {
+                        document.querySelector('#DatabaseRefreshIntervalHours').value = config.DatabaseRefreshIntervalHours || 24;
+                        document.querySelector('#MinEpisodePercentageForSeasonRating').value = config.MinEpisodePercentageForSeasonRating != null ? config.MinEpisodePercentageForSeasonRating : 0;
+                        document.querySelector('#DatasetUrl').value = config.DatasetUrl || 'https://datasets.imdbws.com/title.ratings.tsv.gz';
                         Dashboard.hideLoadingMsg();
                     });
+
+                    loadStatus();
                 });
 
-            document.querySelector('#TemplateConfigForm')
-                .addEventListener('submit', function(e) {
-                Dashboard.showLoadingMsg();
-                ApiClient.getPluginConfiguration(TemplateConfig.pluginUniqueId).then(function (config) {
-                    config.Options = document.querySelector('#Options').value;
-                    config.AnInteger = document.querySelector('#AnInteger').value;
-                    config.TrueFalseSetting = document.querySelector('#TrueFalseSetting').checked;
-                    config.AString = document.querySelector('#AString').value;
-                    ApiClient.updatePluginConfiguration(TemplateConfig.pluginUniqueId, config).then(function (result) {
-                        Dashboard.processPluginConfigurationUpdateResult(result);
+            document.querySelector('#btnRefreshDb')
+                .addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var msgElem = document.querySelector('#refreshStatusMessage');
+                    msgElem.textContent = 'Initiating refresh...';
+                    var refreshUrl = ApiClient.getUrl('Plugins/ImdbRatings/Refresh');
+
+                    ApiClient.ajax({
+                        type: 'POST',
+                        url: refreshUrl
+                    }).then(function() {
+                        msgElem.textContent = 'Refresh started in background. Please check status in a few moments.';
+                        loadStatus();
+                    }).catch(function(err) {
+                        msgElem.textContent = 'Error triggering refresh. An update may already be in progress.';
                     });
                 });
 
-                e.preventDefault();
-                return false;
-            });
+            document.querySelector('#ImdbRatingsConfigForm')
+                .addEventListener('submit', function(e) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(ImdbRatingsConfig.pluginUniqueId).then(function (config) {
+                        config.DatabaseRefreshIntervalHours = parseInt(document.querySelector('#DatabaseRefreshIntervalHours').value, 10) || 24;
+                        config.MinEpisodePercentageForSeasonRating = parseInt(document.querySelector('#MinEpisodePercentageForSeasonRating').value, 10) || 0;
+                        config.DatasetUrl = document.querySelector('#DatasetUrl').value;
+
+                        ApiClient.updatePluginConfiguration(ImdbRatingsConfig.pluginUniqueId, config).then(function (result) {
+                            Dashboard.processPluginConfigurationUpdateResult(result);
+                        });
+                    });
+
+                    e.preventDefault();
+                    return false;
+                });
         </script>
     </div>
 </body>

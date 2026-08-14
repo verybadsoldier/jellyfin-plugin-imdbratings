@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>Jellyfin.Plugin.Template</RootNamespace>
+    <RootNamespace>Jellyfin.Plugin.ImdbRatings</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
@@ -26,7 +26,7 @@
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="10.11.11" />
     <PackageReference Include="Jellyfin.Model" Version="10.11.11" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.11" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,5 +39,13 @@
     <None Remove="Configuration\configPage.html" />
     <EmbeddedResource Include="Configuration\configPage.html" />
   </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)Microsoft.Data.Sqlite.dll;$(TargetDir)SQLitePCLRaw.core.dll;$(TargetDir)SQLitePCLRaw.batteries_v2.dll;$(TargetDir)SQLitePCLRaw.provider.e_sqlite3.dll" DestinationFolder="C:\Users\vbs\AppData\Local\jellyfin\plugins\Jellyfin.Plugin.ImdbRatings" ContinueOnError="true" Retries="0" />
+  </Target>
+
+  <Target Name="PostBuildDateAdded" AfterTargets="PostBuildEvent">
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;C:\Users\vbs\AppData\Local\jellyfin\plugins\Jellyfin.Plugin.DateAddedAdvanced&quot;" ContinueOnError="true" />
+  </Target>
 
 </Project>

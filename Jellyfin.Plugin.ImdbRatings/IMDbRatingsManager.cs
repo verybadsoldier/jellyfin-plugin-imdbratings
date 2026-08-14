@@ -16,6 +16,7 @@ namespace Jellyfin.Plugin.ImdbRatings
     public class IMDbRatingsManager : IDisposable
     {
         private static readonly SemaphoreSlim _updateLock = new SemaphoreSlim(1, 1);
+        private static volatile bool _isUpdating;
         private readonly ILogger _logger;
         private readonly string _dbPath;
         private bool _disposed;
@@ -35,6 +36,11 @@ namespace Jellyfin.Plugin.ImdbRatings
         }
 
         /// <summary>
+        /// Gets a value indicating whether a database update is currently in progress.
+        /// </summary>
+        public static bool IsUpdating => _isUpdating;
+
+        /// <summary>
         /// Delete the database file.
         /// </summary>
         public void DeleteDatabse()
@@ -48,11 +54,17 @@ namespace Jellyfin.Plugin.ImdbRatings
         /// <returns>Task.</returns>
         public async Task PrepareDatabase()
         {
-            // Check if the database file exists and was modified in the last 24 hours
+            int refreshIntervalHours = Plugin.Instance?.Configuration.DatabaseRefreshIntervalHours ?? 24;
+            if (refreshIntervalHours <= 0)
+            {
+                refreshIntervalHours = 24;
+            }
+
+            // Check if the database file exists and was modified within the configured interval
             if (File.Exists(_dbPath))
             {
                 var lastWrite = File.GetLastWriteTimeUtc(_dbPath);
-                if ((DateTime.UtcNow - lastWrite).TotalHours < 24)
+                if ((DateTime.UtcNow - lastWrite).TotalHours < refreshIntervalHours)
                 {
                     return; // DB is fresh, skip update
                 }
@@ -61,11 +73,13 @@ namespace Jellyfin.Plugin.ImdbRatings
             await _updateLock.WaitAsync().ConfigureAwait(false);
             try
             {
+                _isUpdating = true;
+
                 // Double check in case another thread updated it while we waited for the lock
                 if (File.Exists(_dbPath))
                 {
                     var lastWrite = File.GetLastWriteTimeUtc(_dbPath);
-                    if ((DateTime.UtcNow - lastWrite).TotalHours < 24)
+                    if ((DateTime.UtcNow - lastWrite).TotalHours < refreshIntervalHours)
                     {
                         return;
                     }
@@ -75,12 +89,77 @@ namespace Jellyfin.Plugin.ImdbRatings
             }
             finally
             {
+                _isUpdating = false;
                 _updateLock.Release();
             }
         }
 
         /// <summary>
-        /// Gets the IMDb rating for a specific title ID, updating the cache if it is older than 24 hours.
+        /// Forces an immediate refresh of the IMDb dataset.
+        /// </summary>
+        /// <returns>A task representing the operation.</returns>
+        public async Task ForceRefreshDatabaseAsync()
+        {
+            await _updateLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                _isUpdating = true;
+                await RefreshDatabase().ConfigureAwait(false);
+            }
+            finally
+            {
+                _isUpdating = false;
+                _updateLock.Release();
+            }
+        }
+
+        /// <summary>
+        /// Gets the current status of the IMDb ratings database.
+        /// </summary>
+        /// <returns>A <see cref="DatabaseStatus"/> instance.</returns>
+        public async Task<DatabaseStatus> GetStatusAsync()
+        {
+            bool exists = File.Exists(_dbPath);
+            DateTime? lastModifiedUtc = exists ? File.GetLastWriteTimeUtc(_dbPath) : null;
+            long sizeBytes = exists ? new FileInfo(_dbPath).Length : 0;
+            int? entryCount = null;
+
+            if (exists && !_isUpdating)
+            {
+                try
+                {
+                    using var connection = new SqliteConnection($"Data Source={_dbPath};Mode=ReadOnly");
+                    await connection.OpenAsync().ConfigureAwait(false);
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "SELECT COUNT(*) FROM Ratings";
+                    var result = await command.ExecuteScalarAsync().ConfigureAwait(false);
+                    if (result != null && result != DBNull.Value)
+                    {
+                        entryCount = Convert.ToInt32(result, CultureInfo.InvariantCulture);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not query entry count from database");
+                }
+            }
+
+            return new DatabaseStatus
+            {
+                DatabaseExists = exists,
+                LastModifiedUtc = lastModifiedUtc,
+                SizeBytes = sizeBytes,
+                TotalRatings = entryCount,
+                IsUpdating = _isUpdating,
+                RefreshIntervalHours = Plugin.Instance?.Configuration.DatabaseRefreshIntervalHours ?? 24,
+                DatasetUrl = string.IsNullOrWhiteSpace(Plugin.Instance?.Configuration.DatasetUrl)
+                    ? "https://datasets.imdbws.com/title.ratings.tsv.gz"
+                    : Plugin.Instance.Configuration.DatasetUrl
+            };
+        }
+
+        /// <summary>
+        /// Gets the IMDb rating for a specific title ID, updating the cache if needed.
         /// </summary>
         /// <param name="imdbId">The IMDb ID (e.g., tt0111161).</param>
         /// <returns>The average rating, or null if not found.</returns>
@@ -134,7 +213,12 @@ namespace Jellyfin.Plugin.ImdbRatings
                 File.Delete(tempDbPath);
             }
 
-            string url = "https://datasets.imdbws.com/title.ratings.tsv.gz";
+            string? url = Plugin.Instance?.Configuration.DatasetUrl;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                url = "https://datasets.imdbws.com/title.ratings.tsv.gz";
+            }
+
             using var client = new HttpClient();
 
             _logger.LogInformation("Downloading IMDb rating flat file from: {0}", url);
