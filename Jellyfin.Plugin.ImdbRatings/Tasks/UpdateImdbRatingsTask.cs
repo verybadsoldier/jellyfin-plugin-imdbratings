@@ -73,6 +73,12 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
             int totalItems = items.Count + seasons.Count;
             int processed = 0;
 
+            void ReportProgress()
+            {
+                processed++;
+                progress.Report(totalItems > 0 ? (double)processed / totalItems * 100.0 : 100.0);
+            }
+
             // Instantiate the manager once outside the loop
             var cache = new IMDbRatingsManager(_logger);
             await cache.PrepareDatabase().ConfigureAwait(false);
@@ -104,8 +110,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                 // If disabled, skip this item
                 if (!isProviderEnabled)
                 {
-                    processed++;
-                    progress.Report((double)processed / totalItems * 100);
+                    ReportProgress();
                     continue;
                 }
 
@@ -129,8 +134,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                     }
                 }
 
-                processed++;
-                progress.Report((double)processed / totalItems * 100);
+                ReportProgress();
             }
 
             _logger.LogInformation("Calculating IMDb ratings for {Count} seasons...", seasons.Count);
@@ -155,8 +159,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
 
                 if (!isProviderEnabled)
                 {
-                    processed++;
-                    progress.Report((double)processed / totalItems * 100);
+                    ReportProgress();
                     continue;
                 }
 
@@ -187,8 +190,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                     _logger.LogError(ex, "Error updating calculated rating for season {Name}", season.Name);
                 }
 
-                processed++;
-                progress.Report((double)processed / totalItems * 100);
+                ReportProgress();
             }
 
             _logger.LogInformation("IMDb ratings update task finished");
