@@ -106,7 +106,7 @@ jobs:
         run: |
           # Use git describe to generate a meaningful name
           DESC=$(git describe --tags)
-          echo "artifact_name=build-artifact-${DESC}" >> $GITHUB_OUTPUT
+          echo "artifact_name=jellyfin-plugin-imdbratings-${DESC}" >> $GITHUB_OUTPUT
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v5
