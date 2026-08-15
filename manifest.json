@@ -9,6 +9,14 @@
         "imageUrl": "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png",
         "versions": [
             {
+                "version": "4.2.0.0",
+                "changelog": "\nchangelog\n- [18db53f] config: remove manual db update button, change last downloaded label\n- [50735e0] config: fix wrong progress report when no items available\n- [bd02507] config: fix wrong casing in variable names\n- [146cf73] fix: do not dispose static semaphore\n- [1a2bcb0] build: give github build artifact a proper name\n- [793de85] add season ratings and several configuration options",
+                "targetAbi": "10.11.7.0",
+                "sourceUrl": "https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases/download/v4.2.0/imdb-ratings_4.2.0.0.zip",
+                "checksum": "57c1d64ece004e9aab20464140029dba",
+                "timestamp": "2026-08-15T08:26:17Z"
+            },
+            {
                 "version": "4.1.0.0",
                 "changelog": "\nchangelog\n- [992daa2] update dependencies\n- [08bffba] Fix API abuse by removing fallback metadata provider fetches and update README\n- [d487d98] Fix race condition in IMDbRatingsManager during database updates\n- [fd88f42] docs: add v4 feature note to README.md",
                 "targetAbi": "10.11.7.0",
