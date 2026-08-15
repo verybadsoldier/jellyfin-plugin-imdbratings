@@ -318,11 +318,6 @@ namespace Jellyfin.Plugin.ImdbRatings
         {
             if (!_disposed)
             {
-                if (disposing)
-                {
-                    _updateLock.Dispose();
-                }
-
                 _disposed = true;
             }
         }
