@@ -21,7 +21,7 @@ Link: https://developer.imdb.com/non-commercial-datasets/
 * **Official Data Source:** Downloads and caches the official IMDb ratings dataset (`title.ratings.tsv.gz`) directly from IMDb to provide fast, local lookups without web scraping or API rate limits.
 * **Provider Integration:** Acts as a seamless Remote Metadata Provider ("The Internet Movie Database Ratings") that integrates gracefully into Jellyfin's existing metadata refresh pipeline.
 * **Automatic Background Updates:** Includes a built-in scheduler task to keep your library's ratings up-to-date as IMDb scores change over time (defaults to every day at 3 AM).
-* **Plugin Configuration & Status Dashboard:** View live database statistics (number of indexed ratings, file size, last updated time), trigger manual dataset refreshes, and customize cache expiration, minimum episode rating threshold (%), and mirror dataset URLs.
+* **Plugin Configuration & Status Dashboard:** View live database statistics (number of indexed ratings, file size, dataset download timestamp), and customize cache expiration, minimum episode rating threshold (%), and mirror dataset URLs.
 
 ## How It Works
 
@@ -45,8 +45,7 @@ To ensure optimal performance, the plugin caches the IMDb ratings flat file in a
 
 Navigate to **Dashboard -> Plugins -> IMDb Ratings** to view the status dashboard and customize settings:
 
-* **Live Status:** Displays whether the database is ready or updating, the number of ratings indexed, the database size on disk, and the last update timestamp.
-* **Refresh Database Now:** Trigger an immediate re-download and re-index of the IMDb ratings dataset.
+* **Live Status:** Displays whether the database is ready or updating, the number of ratings indexed, the database size on disk, and the dataset download timestamp.
 * **Cache Refresh Interval (Hours):** How often to check for a newer dataset from IMDb (default: 24 hours).
 * **Minimum Episode Rating Threshold for Seasons (%):** The minimum percentage (0–100%) of rated episodes required in a season before calculating and assigning an average rating to the season (default: 0%).
 * **Custom Dataset URL:** Use a custom mirror or proxy if needed (default: `https://datasets.imdbws.com/title.ratings.tsv.gz`).

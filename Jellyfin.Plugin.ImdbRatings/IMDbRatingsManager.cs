@@ -95,25 +95,6 @@ namespace Jellyfin.Plugin.ImdbRatings
         }
 
         /// <summary>
-        /// Forces an immediate refresh of the IMDb dataset.
-        /// </summary>
-        /// <returns>A task representing the operation.</returns>
-        public async Task ForceRefreshDatabaseAsync()
-        {
-            await _updateLock.WaitAsync().ConfigureAwait(false);
-            try
-            {
-                _isUpdating = true;
-                await RefreshDatabase().ConfigureAwait(false);
-            }
-            finally
-            {
-                _isUpdating = false;
-                _updateLock.Release();
-            }
-        }
-
-        /// <summary>
         /// Gets the current status of the IMDb ratings database.
         /// </summary>
         /// <returns>A <see cref="DatabaseStatus"/> instance.</returns>

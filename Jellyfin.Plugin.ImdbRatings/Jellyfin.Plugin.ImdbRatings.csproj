@@ -44,8 +44,4 @@
     <Copy SourceFiles="$(TargetPath);$(TargetDir)Microsoft.Data.Sqlite.dll;$(TargetDir)SQLitePCLRaw.core.dll;$(TargetDir)SQLitePCLRaw.batteries_v2.dll;$(TargetDir)SQLitePCLRaw.provider.e_sqlite3.dll" DestinationFolder="C:\Users\vbs\AppData\Local\jellyfin\plugins\Jellyfin.Plugin.ImdbRatings" ContinueOnError="true" Retries="0" />
   </Target>
 
-  <Target Name="PostBuildDateAdded" AfterTargets="PostBuildEvent">
-    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;C:\Users\vbs\AppData\Local\jellyfin\plugins\Jellyfin.Plugin.DateAddedAdvanced&quot;" ContinueOnError="true" />
-  </Target>
-
 </Project>

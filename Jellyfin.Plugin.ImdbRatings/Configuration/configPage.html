@@ -78,16 +78,9 @@
                             <div id="imdbStatSize" class="imdb-stat-value">-</div>
                         </div>
                         <div class="imdb-stat-box">
-                            <div class="imdb-stat-title">Last Updated</div>
+                            <div class="imdb-stat-title">Dataset Downloaded</div>
                             <div id="imdbStatLastUpdated" class="imdb-stat-value">-</div>
                         </div>
-                    </div>
-
-                    <div style="margin-top: 1em; display: flex; align-items: center; gap: 1em; flex-wrap: wrap;">
-                        <button id="btnRefreshDb" is="emby-button" type="button" class="raised emby-button">
-                            <span>Refresh Database Now</span>
-                        </button>
-                        <span id="refreshStatusMessage" style="font-size: 0.9em; color: #aaa;"></span>
                     </div>
                 </div>
 
@@ -138,6 +131,8 @@
                 return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
             }
 
+            var statusPollTimer = null;
+
             function loadStatus() {
                 var statusUrl = ApiClient.getUrl('Plugins/ImdbRatings/Status');
                 ApiClient.getJSON(statusUrl).then(function(status) {
@@ -146,10 +141,22 @@
                     var sizeElem = document.querySelector('#imdbStatSize');
                     var lastUpdatedElem = document.querySelector('#imdbStatLastUpdated');
 
-                    if (status.isUpdating) {
+                    var isUpdating = (status.isUpdating ?? status.IsUpdating) === true;
+                    var databaseExists = (status.databaseExists ?? status.DatabaseExists) === true;
+                    var totalRatings = status.totalRatings ?? status.TotalRatings;
+                    var sizeBytes = status.sizeBytes ?? status.SizeBytes ?? 0;
+                    var lastModifiedUtc = status.lastModifiedUtc ?? status.LastModifiedUtc;
+
+                    if (isUpdating) {
                         badge.textContent = 'Updating...';
                         badge.className = 'imdb-badge imdb-badge-updating';
-                    } else if (status.databaseExists && status.totalRatings > 0) {
+                        if (!statusPollTimer) {
+                            statusPollTimer = setTimeout(function() {
+                                statusPollTimer = null;
+                                loadStatus();
+                            }, 3000);
+                        }
+                    } else if (databaseExists && totalRatings > 0) {
                         badge.textContent = 'Ready';
                         badge.className = 'imdb-badge imdb-badge-ready';
                     } else {
@@ -157,11 +164,11 @@
                         badge.className = 'imdb-badge imdb-badge-missing';
                     }
 
-                    countElem.textContent = status.totalRatings != null ? status.totalRatings.toLocaleString() : '-';
-                    sizeElem.textContent = formatBytes(status.sizeBytes);
+                    countElem.textContent = totalRatings != null ? totalRatings.toLocaleString() : '-';
+                    sizeElem.textContent = formatBytes(sizeBytes);
 
-                    if (status.lastModifiedUtc) {
-                        var date = new Date(status.lastModifiedUtc);
+                    if (lastModifiedUtc) {
+                        var date = new Date(lastModifiedUtc);
                         lastUpdatedElem.textContent = date.toLocaleString();
                     } else {
                         lastUpdatedElem.textContent = 'Never';
@@ -179,31 +186,13 @@
                 .addEventListener('pageshow', function() {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(ImdbRatingsConfig.pluginUniqueId).then(function (config) {
-                        document.querySelector('#DatabaseRefreshIntervalHours').value = config.DatabaseRefreshIntervalHours || 24;
-                        document.querySelector('#MinEpisodePercentageForSeasonRating').value = config.MinEpisodePercentageForSeasonRating != null ? config.MinEpisodePercentageForSeasonRating : 0;
-                        document.querySelector('#DatasetUrl').value = config.DatasetUrl || 'https://datasets.imdbws.com/title.ratings.tsv.gz';
+                        document.querySelector('#DatabaseRefreshIntervalHours').value = config.DatabaseRefreshIntervalHours || config.databaseRefreshIntervalHours || 24;
+                        document.querySelector('#MinEpisodePercentageForSeasonRating').value = config.MinEpisodePercentageForSeasonRating != null ? config.MinEpisodePercentageForSeasonRating : (config.minEpisodePercentageForSeasonRating != null ? config.minEpisodePercentageForSeasonRating : 0);
+                        document.querySelector('#DatasetUrl').value = config.DatasetUrl || config.datasetUrl || 'https://datasets.imdbws.com/title.ratings.tsv.gz';
                         Dashboard.hideLoadingMsg();
                     });
 
                     loadStatus();
-                });
-
-            document.querySelector('#btnRefreshDb')
-                .addEventListener('click', function(e) {
-                    e.preventDefault();
-                    var msgElem = document.querySelector('#refreshStatusMessage');
-                    msgElem.textContent = 'Initiating refresh...';
-                    var refreshUrl = ApiClient.getUrl('Plugins/ImdbRatings/Refresh');
-
-                    ApiClient.ajax({
-                        type: 'POST',
-                        url: refreshUrl
-                    }).then(function() {
-                        msgElem.textContent = 'Refresh started in background. Please check status in a few moments.';
-                        loadStatus();
-                    }).catch(function(err) {
-                        msgElem.textContent = 'Error triggering refresh. An update may already be in progress.';
-                    });
                 });
 
             document.querySelector('#ImdbRatingsConfigForm')

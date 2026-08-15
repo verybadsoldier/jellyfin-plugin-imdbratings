@@ -39,38 +39,5 @@ namespace Jellyfin.Plugin.ImdbRatings.Api
             var status = await manager.GetStatusAsync().ConfigureAwait(false);
             return Ok(status);
         }
-
-        /// <summary>
-        /// Triggers an immediate refresh of the IMDb dataset in the background.
-        /// </summary>
-        /// <response code="202">Refresh initiated.</response>
-        /// <response code="409">An update is already in progress.</response>
-        /// <returns>An ActionResult indicating acceptance.</returns>
-        [HttpPost("Refresh")]
-        [ProducesResponseType(StatusCodes.Status202Accepted)]
-        [ProducesResponseType(StatusCodes.Status409Conflict)]
-        public ActionResult RefreshDatabase()
-        {
-            if (IMDbRatingsManager.IsUpdating)
-            {
-                return Conflict(new { message = "A database update is already in progress." });
-            }
-
-            // Run in background
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    using var manager = new IMDbRatingsManager(_logger);
-                    await manager.ForceRefreshDatabaseAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error refreshing IMDb database via API request");
-                }
-            });
-
-            return Accepted(new { message = "Database refresh initiated." });
-        }
     }
 }
