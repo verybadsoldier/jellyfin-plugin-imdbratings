@@ -146,10 +146,10 @@
                     var sizeElem = document.querySelector('#imdbStatSize');
                     var lastUpdatedElem = document.querySelector('#imdbStatLastUpdated');
 
-                    if (status.IsUpdating) {
+                    if (status.isUpdating) {
                         badge.textContent = 'Updating...';
                         badge.className = 'imdb-badge imdb-badge-updating';
-                    } else if (status.DatabaseExists && status.TotalRatings > 0) {
+                    } else if (status.databaseExists && status.totalRatings > 0) {
                         badge.textContent = 'Ready';
                         badge.className = 'imdb-badge imdb-badge-ready';
                     } else {
@@ -157,11 +157,11 @@
                         badge.className = 'imdb-badge imdb-badge-missing';
                     }
 
-                    countElem.textContent = status.TotalRatings != null ? status.TotalRatings.toLocaleString() : '-';
-                    sizeElem.textContent = formatBytes(status.SizeBytes);
+                    countElem.textContent = status.totalRatings != null ? status.totalRatings.toLocaleString() : '-';
+                    sizeElem.textContent = formatBytes(status.sizeBytes);
 
-                    if (status.LastModifiedUtc) {
-                        var date = new Date(status.LastModifiedUtc);
+                    if (status.lastModifiedUtc) {
+                        var date = new Date(status.lastModifiedUtc);
                         lastUpdatedElem.textContent = date.toLocaleString();
                     } else {
                         lastUpdatedElem.textContent = 'Never';
