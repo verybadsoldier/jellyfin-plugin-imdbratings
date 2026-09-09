@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>Jellyfin.Plugin.ImdbRatings</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <PackageReference Include="SerilogAnalyzer" Version="0.15.0" PrivateAssets="All" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
     <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.507" PrivateAssets="All" />
     <PackageReference Include="SmartAnalyzers.MultithreadingAnalyzer" Version="1.1.31" PrivateAssets="All" />
   </ItemGroup>
@@ -39,9 +40,5 @@
     <None Remove="Configuration\configPage.html" />
     <EmbeddedResource Include="Configuration\configPage.html" />
   </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(TargetPath);$(TargetDir)Microsoft.Data.Sqlite.dll;$(TargetDir)SQLitePCLRaw.core.dll;$(TargetDir)SQLitePCLRaw.batteries_v2.dll;$(TargetDir)SQLitePCLRaw.provider.e_sqlite3.dll" DestinationFolder="C:\Users\vbs\AppData\Local\jellyfin\plugins\Jellyfin.Plugin.ImdbRatings" ContinueOnError="true" Retries="0" />
-  </Target>
 
 </Project>

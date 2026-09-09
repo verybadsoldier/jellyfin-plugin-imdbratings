@@ -2,7 +2,7 @@
 name: "IMDb Ratings"
 guid: "12418add-9a9d-422d-8e35-dde91cf5baf9"
 version: "<template>"
-targetAbi: "10.11.7.0"
+targetAbi: "12.0.0.0"
 framework: "<template>"
 imageUrl: "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png"
 overview: "Ratings from IMDb"
