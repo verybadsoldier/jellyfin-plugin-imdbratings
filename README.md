@@ -80,7 +80,7 @@ If your ratings are not appearing for episodes:
 1. In your Jellyfin server, navigate to **Dashboard -> Plugins -> Repositories**.
 2. Click the `+` icon to add a new repository.
 3. Enter a name (e.g., "IMDb Ratings") and the following URL: 
-   `https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/refs/heads/repository/manifest.json`
+   `https://verybadsoldier.github.io/jellyfin-plugin-imdbratings/manifest.json`
 4. Go to the **Catalog** tab, find "IMDb Ratings", and click Install.
 5. Restart your Jellyfin server.
 
