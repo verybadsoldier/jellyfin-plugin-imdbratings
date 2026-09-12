@@ -41,4 +41,8 @@
     <EmbeddedResource Include="Configuration\configPage.html" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec ContinueOnError="true" Command=":: Create the plugin subfolder if it doesn't exist&#xD;&#xA;if not exist &quot;%25LOCALAPPDATA%25\jellyfin\plugins\$(TargetName)&quot; mkdir &quot;%25LOCALAPPDATA%25\jellyfin\plugins\$(TargetName)&quot;&#xD;&#xA;&#xD;&#xA;:: Copy the primary DLL and PDB&#xD;&#xA;xcopy /Y /D &quot;$(TargetPath)&quot; &quot;%25LOCALAPPDATA%25\jellyfin\plugins\$(TargetName)\&quot;&#xD;&#xA;if exist &quot;$(TargetDir)$(TargetName).pdb&quot; xcopy /Y /D &quot;$(TargetDir)$(TargetName).pdb&quot; &quot;%25LOCALAPPDATA%25\jellyfin\plugins\$(TargetName)\&quot;&#xD;&#xA;&#xD;&#xA;:: Copy library artifacts&#xD;&#xA;xcopy /Y /D &quot;$(TargetDir)Microsoft.Data.Sqlite.dll&quot; &quot;%25LOCALAPPDATA%25\jellyfin\plugins\$(TargetName)\&quot;&#xD;&#xA;xcopy /Y /D &quot;$(TargetDir)SQLitePCLRaw*.dll&quot; &quot;%25LOCALAPPDATA%25\jellyfin\plugins\$(TargetName)\&quot;" />
+  </Target>
+
 </Project>
