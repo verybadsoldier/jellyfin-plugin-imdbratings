@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.ImdbRatings;
+using Jellyfin.Plugin.ImdbRatings.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -37,7 +38,7 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
 
         public string Key => "UpdateImdbRatingsTask";
 
-        public string Description => "Regularly updates the IMDb community ratings for movies, series, seasons, and episodes.";
+        public string Description => "Regularly updates the IMDb ratings for movies, series, seasons, and episodes.";
 
         public string Category => "Library";
 
@@ -120,11 +121,10 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                     try
                     {
                         var rating = await cache.GetRatingAsync(imdbId).ConfigureAwait(false);
+                        var target = Plugin.Instance?.Configuration.RatingTarget ?? RatingTarget.Community;
 
-                        if (rating.HasValue && item.CommunityRating != rating.Value)
+                        if (RatingHelper.ApplyRating(item, rating, target, _logger))
                         {
-                            _logger.LogInformation("Updating IMDb rating for '{Name}' from {OldRating} to {NewRating}", item.Name, item.CommunityRating, rating.Value);
-                            item.CommunityRating = rating.Value;
                             await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
                         }
                     }
@@ -176,12 +176,11 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                         }).OfType<Episode>().ToList();
                     }
 
+                    var target = Plugin.Instance?.Configuration.RatingTarget ?? RatingTarget.Community;
                     int minPercentage = Plugin.Instance?.Configuration.MinEpisodePercentageForSeasonRating ?? 0;
-                    var avgRating = SeasonRatingCalculator.CalculateAverageRating(episodes, minPercentage);
-                    if (avgRating.HasValue && season.CommunityRating != avgRating.Value)
+                    var avgRating = SeasonRatingCalculator.CalculateAverageRating(episodes, minPercentage, target);
+                    if (avgRating.HasValue && RatingHelper.ApplyRating(season, avgRating, target, _logger))
                     {
-                        _logger.LogInformation("Updating calculated IMDb rating for season '{Name}' from {OldRating} to {NewRating}", season.Name, season.CommunityRating, avgRating.Value);
-                        season.CommunityRating = avgRating.Value;
                         await season.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
                     }
                 }

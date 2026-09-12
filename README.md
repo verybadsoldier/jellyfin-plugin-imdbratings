@@ -24,12 +24,13 @@
 
 ## ✨ Features
 
-* ⭐ **Official IMDb Ratings:** Fetches community ratings directly from the official IMDb flat-file dataset (`title.ratings.tsv.gz`). No web scraping, no API keys, and no rate limits.
+* ⭐ **Official IMDb Ratings:** Fetches ratings directly from the official IMDb flat-file dataset (`title.ratings.tsv.gz`). No web scraping, no API keys, and no rate limits.
+* 🎯 **Flexible Rating Target:** Choose whether IMDb scores are saved as Community Rating, Critic Rating, or both to best fit your client UI and library preferences.
 * 📊 **Calculated Season Ratings:** IMDb only provides ratings at the episode level. This plugin automatically computes and assigns weighted/average ratings for entire TV seasons based on their rated episodes.
 * ⚡ **Ultra-Low Memory Footprint:** Cached in a compact, indexed SQLite database for fast lookups with near-zero idle RAM usage.
 * 🔄 **Automatic Background Sync:** A built-in Jellyfin Scheduled Task keeps ratings fresh as IMDb scores update over time (runs daily at 3:00 AM by default).
 * 🧩 **Seamless Provider Integration:** Plugs directly into Jellyfin's native metadata downloaders pipeline for Movies, Series, Seasons, and Episodes.
-* 🎛️ **Dashboard & Customization:** View live database status, total indexed titles, disk usage, and customize cache refresh intervals or season rating thresholds.
+* 🎛️ **Dashboard & Customization:** View live database status, total indexed titles, disk usage, and customize rating target, cache refresh intervals, or season rating thresholds.
 
 ---
 
@@ -85,6 +86,7 @@ Once the plugin is installed and your server has restarted:
 Navigate to **Dashboard** > **Plugins** > **IMDb Ratings** to access plugin settings and status:
 
 * **Live Status:** Displays whether the database is ready or updating, total number of indexed ratings, database file size on disk, and dataset download timestamp.
+* **Rating Target:** Choose whether IMDb ratings should be saved as Community Rating, Critic Rating, or both (default: `Community Rating`).
 * **Cache Refresh Interval (Hours):** How often to check for an updated dataset from IMDb (default: `24` hours).
 * **Minimum Episode Rating Threshold for Seasons (%):** The percentage (0–100%) of rated episodes required in a season before calculating and assigning an average rating (default: `0%`).
 * **Custom Dataset URL:** Use a custom mirror or proxy if desired (default: `https://datasets.imdbws.com/title.ratings.tsv.gz`).

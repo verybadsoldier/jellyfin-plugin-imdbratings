@@ -15,6 +15,7 @@ public class PluginConfiguration : BasePluginConfiguration
         DatabaseRefreshIntervalHours = 24;
         MinEpisodePercentageForSeasonRating = 0;
         DatasetUrl = "https://datasets.imdbws.com/title.ratings.tsv.gz";
+        RatingTarget = RatingTarget.Community;
     }
 
     /// <summary>
@@ -31,4 +32,9 @@ public class PluginConfiguration : BasePluginConfiguration
     /// Gets or sets the URL to download the IMDb title ratings dataset from.
     /// </summary>
     public string DatasetUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the target field where IMDb ratings should be saved.
+    /// </summary>
+    public RatingTarget RatingTarget { get; set; }
 }

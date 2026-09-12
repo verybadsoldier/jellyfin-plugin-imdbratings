@@ -24,6 +24,7 @@ using BitFaster.Caching;
 using Jellyfin.Data.Enums;
 using Jellyfin.Extensions.Json;
 using Jellyfin.Plugin.ImdbRatings;
+using Jellyfin.Plugin.ImdbRatings.Configuration;
 using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Controller.Entities;
@@ -94,7 +95,8 @@ namespace MediaBrowser.Providers.Plugins.Imdb
 
             if (rating.HasValue)
             {
-                result.Item.CommunityRating = rating;
+                var target = Plugin.Instance?.Configuration.RatingTarget ?? RatingTarget.Community;
+                RatingHelper.ApplyRating(result.Item, rating, target);
                 result.HasMetadata = true;
             }
 
@@ -141,12 +143,12 @@ namespace MediaBrowser.Providers.Plugins.Imdb
                 }).OfType<Episode>().ToList();
             }
 
+            var target = Plugin.Instance?.Configuration.RatingTarget ?? RatingTarget.Community;
             int minPercentage = Plugin.Instance?.Configuration.MinEpisodePercentageForSeasonRating ?? 0;
-            var avgRating = SeasonRatingCalculator.CalculateAverageRating(episodes, minPercentage);
-            if (avgRating.HasValue && item.CommunityRating != avgRating.Value)
+            var avgRating = SeasonRatingCalculator.CalculateAverageRating(episodes, minPercentage, target);
+            if (avgRating.HasValue && RatingHelper.ApplyRating(item, avgRating, target, _logger))
             {
                 _logger.LogInformation("Calculated average IMDb rating {Rating} for season '{SeasonName}' from episodes", avgRating.Value, item.Name);
-                item.CommunityRating = avgRating.Value;
                 return Task.FromResult(ItemUpdateType.MetadataEdit);
             }
 

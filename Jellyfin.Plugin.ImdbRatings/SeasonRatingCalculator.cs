@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Jellyfin.Plugin.ImdbRatings.Configuration;
 using MediaBrowser.Controller.Entities.TV;
 
 namespace Jellyfin.Plugin.ImdbRatings
@@ -11,12 +12,16 @@ namespace Jellyfin.Plugin.ImdbRatings
     public static class SeasonRatingCalculator
     {
         /// <summary>
-        /// Calculates the average community rating from a collection of episodes.
+        /// Calculates the average rating from a collection of episodes.
         /// </summary>
         /// <param name="episodes">The episodes to calculate the average from.</param>
         /// <param name="minPercentage">The minimum percentage (0-100) of rated episodes required.</param>
+        /// <param name="ratingTarget">The rating target field to read episode ratings from.</param>
         /// <returns>The rounded average rating, or null if no valid ratings are present or threshold is not met.</returns>
-        public static float? CalculateAverageRating(IEnumerable<Episode>? episodes, int minPercentage = 0)
+        public static float? CalculateAverageRating(
+            IEnumerable<Episode>? episodes,
+            int minPercentage = 0,
+            RatingTarget ratingTarget = RatingTarget.Community)
         {
             if (episodes == null)
             {
@@ -29,7 +34,14 @@ namespace Jellyfin.Plugin.ImdbRatings
                 return null;
             }
 
-            return CalculateAverageRating(episodeList.Select(e => e.CommunityRating), episodeList.Count, minPercentage);
+            Func<Episode, float?> selector = ratingTarget switch
+            {
+                RatingTarget.Critic => e => e.CriticRating,
+                RatingTarget.Both => e => e.CommunityRating ?? e.CriticRating,
+                _ => e => e.CommunityRating,
+            };
+
+            return CalculateAverageRating(episodeList.Select(selector), episodeList.Count, minPercentage);
         }
 
         /// <summary>

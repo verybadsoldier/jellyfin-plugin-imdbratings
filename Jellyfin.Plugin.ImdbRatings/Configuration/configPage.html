@@ -86,6 +86,18 @@
 
                 <!-- Settings Form -->
                 <form id="ImdbRatingsConfigForm">
+                    <div class="selectContainer">
+                        <label class="selectLabel" for="RatingTarget">Rating Target</label>
+                        <select is="emby-select" id="RatingTarget" name="RatingTarget" class="emby-select-withcolor emby-select">
+                            <option value="Community">Community Rating</option>
+                            <option value="Critic">Critic Rating</option>
+                            <option value="Both">Both (Community and Critic)</option>
+                        </select>
+                        <div class="fieldDescription">
+                            Choose whether IMDb ratings should be stored as Community Rating, Critic Rating, or both. Default is Community Rating.
+                        </div>
+                    </div>
+
                     <div class="inputContainer">
                         <label class="inputLabel inputLabelUnfocused" for="DatabaseRefreshIntervalHours">Cache Refresh Interval (Hours)</label>
                         <input id="DatabaseRefreshIntervalHours" name="DatabaseRefreshIntervalHours" type="number" is="emby-input" min="1" max="720" required />
@@ -186,6 +198,13 @@
                 .addEventListener('pageshow', function() {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(ImdbRatingsConfig.pluginUniqueId).then(function (config) {
+                        var selectRatingTarget = document.querySelector('#RatingTarget');
+                        selectRatingTarget.value = config.RatingTarget || config.ratingTarget || 'Community';
+                        selectRatingTarget.dispatchEvent(new Event('change', {
+                            bubbles: true,
+                            cancelable: false
+                        }));
+
                         document.querySelector('#DatabaseRefreshIntervalHours').value = config.DatabaseRefreshIntervalHours || config.databaseRefreshIntervalHours || 24;
                         document.querySelector('#MinEpisodePercentageForSeasonRating').value = config.MinEpisodePercentageForSeasonRating != null ? config.MinEpisodePercentageForSeasonRating : (config.minEpisodePercentageForSeasonRating != null ? config.minEpisodePercentageForSeasonRating : 0);
                         document.querySelector('#DatasetUrl').value = config.DatasetUrl || config.datasetUrl || 'https://datasets.imdbws.com/title.ratings.tsv.gz';
@@ -199,6 +218,7 @@
                 .addEventListener('submit', function(e) {
                     Dashboard.showLoadingMsg();
                     ApiClient.getPluginConfiguration(ImdbRatingsConfig.pluginUniqueId).then(function (config) {
+                        config.RatingTarget = document.querySelector('#RatingTarget').value;
                         config.DatabaseRefreshIntervalHours = parseInt(document.querySelector('#DatabaseRefreshIntervalHours').value, 10) || 24;
                         config.MinEpisodePercentageForSeasonRating = parseInt(document.querySelector('#MinEpisodePercentageForSeasonRating').value, 10) || 0;
                         config.DatasetUrl = document.querySelector('#DatasetUrl').value;
