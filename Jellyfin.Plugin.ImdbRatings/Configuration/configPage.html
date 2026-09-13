@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -74,12 +74,42 @@
                             <div id="imdbStatCount" class="imdb-stat-value">-</div>
                         </div>
                         <div class="imdb-stat-box">
+                            <div class="imdb-stat-title">Episodes Mapped</div>
+                            <div id="imdbStatEpisodes" class="imdb-stat-value">-</div>
+                        </div>
+                        <div class="imdb-stat-box">
                             <div class="imdb-stat-title">Database Size</div>
                             <div id="imdbStatSize" class="imdb-stat-value">-</div>
                         </div>
                         <div class="imdb-stat-box">
                             <div class="imdb-stat-title">Dataset Downloaded</div>
                             <div id="imdbStatLastUpdated" class="imdb-stat-value">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Library Episode Statistics Section -->
+                <div class="imdb-status-card" id="imdbLibraryStatsCard">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5em;">
+                        <h2 style="margin: 0; font-size: 1.2em;">Library Episode Resolution Statistics</h2>
+                        <span id="imdbLibraryScanTime" style="font-size: 0.85em; color: #bbb;">Last Scan: Never</span>
+                    </div>
+                    <div id="imdbLibraryStatsEmpty" style="display: none; margin-top: 1em; color: #aaa;">
+                        No library scan recorded yet. Run the <b>Update IMDb Ratings</b> scheduled task to scan your TV library and generate statistics.
+                    </div>
+                    <div id="imdbLibraryStatsContent" class="imdb-status-grid" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+                        <div class="imdb-stat-box" style="border-left-color: #3498db;">
+                            <div class="imdb-stat-title">Total Episodes</div>
+                            <div id="statLibTotal" class="imdb-stat-value">-</div>
+                        </div>
+                        <div class="imdb-stat-box" style="border-left-color: #f39c12;">
+                            <div class="imdb-stat-title">Missing IMDb ID</div>
+                            <div id="statLibMissing" class="imdb-stat-value">-</div>
+                        </div>
+                        <div class="imdb-stat-box" style="border-left-color: #9b59b6;">
+                            <div class="imdb-stat-title">Resolved by Plugin</div>
+                            <div id="statLibResolved" class="imdb-stat-value">-</div>
+                            <div id="statLibResolvedPct" style="font-size: 0.75em; color: #bbb; margin-top: 0.2em;">-</div>
                         </div>
                     </div>
                 </div>
@@ -114,11 +144,29 @@
                         </div>
                     </div>
 
+                    <div class="checkboxContainer checkboxContainer-withDescription" style="margin: 1.5em 0;">
+                        <label class="emby-checkbox-label">
+                            <input id="EnableEpisodeResolution" name="EnableEpisodeResolution" type="checkbox" is="emby-checkbox" />
+                            <span class="checkboxLabel">Enable Missing Episode IMDb ID Resolution</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">
+                            Automatically resolves missing IMDb IDs in-memory for TV episodes to fetch ratings when upstream metadata providers lack them (matching Series IMDb ID, Season number, and Episode number against the official IMDb episode dataset) without modifying the episode's stored provider IDs. Requires ~52 MB download and ~200 MB disk space. Default is enabled.
+                        </div>
+                    </div>
+
                     <div class="inputContainer">
-                        <label class="inputLabel inputLabelUnfocused" for="DatasetUrl">IMDb Dataset URL</label>
+                        <label class="inputLabel inputLabelUnfocused" for="DatasetUrl">IMDb Ratings Dataset URL</label>
                         <input id="DatasetUrl" name="DatasetUrl" type="url" is="emby-input" />
                         <div class="fieldDescription">
                             URL to download the IMDb title ratings gzip file from. Default: <code>https://datasets.imdbws.com/title.ratings.tsv.gz</code>
+                        </div>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="EpisodeDatasetUrl">IMDb Episode Dataset URL</label>
+                        <input id="EpisodeDatasetUrl" name="EpisodeDatasetUrl" type="url" is="emby-input" />
+                        <div class="fieldDescription">
+                            URL to download the IMDb title episode gzip file from. Default: <code>https://datasets.imdbws.com/title.episode.tsv.gz</code>
                         </div>
                     </div>
 
@@ -150,12 +198,15 @@
                 ApiClient.getJSON(statusUrl).then(function(status) {
                     var badge = document.querySelector('#imdbStatusBadge');
                     var countElem = document.querySelector('#imdbStatCount');
+                    var epCountElem = document.querySelector('#imdbStatEpisodes');
                     var sizeElem = document.querySelector('#imdbStatSize');
                     var lastUpdatedElem = document.querySelector('#imdbStatLastUpdated');
 
                     var isUpdating = (status.isUpdating ?? status.IsUpdating) === true;
                     var databaseExists = (status.databaseExists ?? status.DatabaseExists) === true;
                     var totalRatings = status.totalRatings ?? status.TotalRatings;
+                    var totalEpisodes = status.totalEpisodes ?? status.TotalEpisodes;
+                    var enableEpisodeResolution = (status.enableEpisodeResolution ?? status.EnableEpisodeResolution) === true;
                     var sizeBytes = status.sizeBytes ?? status.SizeBytes ?? 0;
                     var lastModifiedUtc = status.lastModifiedUtc ?? status.LastModifiedUtc;
 
@@ -177,6 +228,13 @@
                     }
 
                     countElem.textContent = totalRatings != null ? totalRatings.toLocaleString() : '-';
+                    if (epCountElem) {
+                        if (enableEpisodeResolution) {
+                            epCountElem.textContent = totalEpisodes != null ? totalEpisodes.toLocaleString() : '-';
+                        } else {
+                            epCountElem.textContent = 'Disabled';
+                        }
+                    }
                     sizeElem.textContent = formatBytes(sizeBytes);
 
                     if (lastModifiedUtc) {
@@ -184,6 +242,40 @@
                         lastUpdatedElem.textContent = date.toLocaleString();
                     } else {
                         lastUpdatedElem.textContent = 'Never';
+                    }
+
+                    // Library episode resolution stats
+                    var libTotal = status.libraryEpisodesTotal ?? status.LibraryEpisodesTotal;
+                    var libMissing = status.libraryEpisodesMissingId ?? status.LibraryEpisodesMissingId;
+                    var libResolved = status.libraryEpisodesResolved ?? status.LibraryEpisodesResolved;
+                    var lastLibScan = status.lastLibraryScanUtc ?? status.LastLibraryScanUtc;
+
+                    var statsEmpty = document.querySelector('#imdbLibraryStatsEmpty');
+                    var statsContent = document.querySelector('#imdbLibraryStatsContent');
+                    var scanTimeElem = document.querySelector('#imdbLibraryScanTime');
+
+                    if (libTotal != null && libTotal > 0) {
+                        statsEmpty.style.display = 'none';
+                        statsContent.style.display = 'grid';
+
+                        document.querySelector('#statLibTotal').textContent = libTotal.toLocaleString();
+                        document.querySelector('#statLibMissing').textContent = (libMissing ?? 0).toLocaleString();
+                        document.querySelector('#statLibResolved').textContent = (libResolved ?? 0).toLocaleString();
+
+                        if (libMissing != null && libMissing > 0) {
+                            var pct = ((libResolved ?? 0) / libMissing * 100.0).toFixed(1);
+                            document.querySelector('#statLibResolvedPct').textContent = pct + '% recovered';
+                        } else {
+                            document.querySelector('#statLibResolvedPct').textContent = '100% complete';
+                        }
+
+                        if (lastLibScan) {
+                            scanTimeElem.textContent = 'Last Scan: ' + new Date(lastLibScan).toLocaleString();
+                        }
+                    } else {
+                        statsEmpty.style.display = 'block';
+                        statsContent.style.display = 'none';
+                        scanTimeElem.textContent = 'Last Scan: Never';
                     }
                 }).catch(function() {
                     var badge = document.querySelector('#imdbStatusBadge');
@@ -207,7 +299,12 @@
 
                         document.querySelector('#DatabaseRefreshIntervalHours').value = config.DatabaseRefreshIntervalHours || config.databaseRefreshIntervalHours || 24;
                         document.querySelector('#MinEpisodePercentageForSeasonRating').value = config.MinEpisodePercentageForSeasonRating != null ? config.MinEpisodePercentageForSeasonRating : (config.minEpisodePercentageForSeasonRating != null ? config.minEpisodePercentageForSeasonRating : 0);
+                        
+                        var enableEpResolution = config.EnableEpisodeResolution != null ? config.EnableEpisodeResolution : (config.enableEpisodeResolution != null ? config.enableEpisodeResolution : true);
+                        document.querySelector('#EnableEpisodeResolution').checked = enableEpResolution === true;
+
                         document.querySelector('#DatasetUrl').value = config.DatasetUrl || config.datasetUrl || 'https://datasets.imdbws.com/title.ratings.tsv.gz';
+                        document.querySelector('#EpisodeDatasetUrl').value = config.EpisodeDatasetUrl || config.episodeDatasetUrl || 'https://datasets.imdbws.com/title.episode.tsv.gz';
                         Dashboard.hideLoadingMsg();
                     });
 
@@ -221,7 +318,9 @@
                         config.RatingTarget = document.querySelector('#RatingTarget').value;
                         config.DatabaseRefreshIntervalHours = parseInt(document.querySelector('#DatabaseRefreshIntervalHours').value, 10) || 24;
                         config.MinEpisodePercentageForSeasonRating = parseInt(document.querySelector('#MinEpisodePercentageForSeasonRating').value, 10) || 0;
+                        config.EnableEpisodeResolution = document.querySelector('#EnableEpisodeResolution').checked;
                         config.DatasetUrl = document.querySelector('#DatasetUrl').value;
+                        config.EpisodeDatasetUrl = document.querySelector('#EpisodeDatasetUrl').value;
 
                         ApiClient.updatePluginConfiguration(ImdbRatingsConfig.pluginUniqueId, config).then(function (result) {
                             Dashboard.processPluginConfigurationUpdateResult(result);

@@ -113,9 +113,57 @@ namespace MediaBrowser.Providers.Plugins.Imdb
             return GetResult<Movie, MovieInfo>(info, cancellationToken);
         }
 
-        public Task<MetadataResult<Episode>> GetMetadata(EpisodeInfo info, CancellationToken cancellationToken)
+        public async Task<MetadataResult<Episode>> GetMetadata(EpisodeInfo info, CancellationToken cancellationToken)
         {
-            return GetResult<Episode, EpisodeInfo>(info, cancellationToken);
+            var result = new MetadataResult<Episode>
+            {
+                QueriedById = true,
+                Item = new Episode(),
+                HasMetadata = false
+            };
+
+            var imdbId = info.GetProviderId(MetadataProvider.Imdb);
+
+            if (string.IsNullOrWhiteSpace(imdbId) && (Plugin.Instance?.Configuration.EnableEpisodeResolution ?? true))
+            {
+                string seriesImdbId = null;
+                if (info.SeriesProviderIds != null)
+                {
+                    info.SeriesProviderIds.TryGetValue(MetadataProvider.Imdb.ToString(), out seriesImdbId);
+                }
+
+                if (!string.IsNullOrWhiteSpace(seriesImdbId) && info.ParentIndexNumber.HasValue && info.IndexNumber.HasValue)
+                {
+                    imdbId = await _cache.GetEpisodeImdbIdAsync(seriesImdbId, info.ParentIndexNumber.Value, info.IndexNumber.Value).ConfigureAwait(false);
+                    if (!string.IsNullOrEmpty(imdbId))
+                    {
+                        _logger.LogInformation(
+                            "Resolved in-memory IMDb ID '{0}' for episode S{1:D2}E{2:D2} of series '{3}' to fetch rating",
+                            imdbId,
+                            info.ParentIndexNumber.Value,
+                            info.IndexNumber.Value,
+                            seriesImdbId);
+                    }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(imdbId))
+            {
+                return result;
+            }
+
+            float? rating = await _cache.GetRatingAsync(imdbId).ConfigureAwait(false);
+
+            _logger.LogInformation("Fetched IMDb rating for ID '{0}': {1}", imdbId, rating);
+
+            if (rating.HasValue)
+            {
+                var target = Plugin.Instance?.Configuration.RatingTarget ?? RatingTarget.Community;
+                RatingHelper.ApplyRating(result.Item, rating, target);
+                result.HasMetadata = true;
+            }
+
+            return result;
         }
 
         public Task<MetadataResult<Season>> GetMetadata(SeasonInfo info, CancellationToken cancellationToken)

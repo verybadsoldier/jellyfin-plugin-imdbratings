@@ -1,4 +1,4 @@
-#pragma warning disable CS1591
+﻿#pragma warning disable CS1591
 
 using System;
 using System.Collections.Generic;
@@ -86,6 +86,10 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
 
             var providerName = "The Internet Movie Database Ratings";
 
+            int episodeTotal = 0;
+            int episodeMissingId = 0;
+            int episodeResolved = 0;
+
             foreach (var item in items)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -116,6 +120,39 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                 }
 
                 var imdbId = item.GetProviderId(MetadataProvider.Imdb);
+
+                if (item is Episode episode)
+                {
+                    episodeTotal++;
+                    if (string.IsNullOrEmpty(imdbId))
+                    {
+                        episodeMissingId++;
+                        if (Plugin.Instance?.Configuration.EnableEpisodeResolution ?? true)
+                        {
+                            var series = episode.Series ?? (episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) as Series : null);
+                            var seriesImdbId = series?.GetProviderId(MetadataProvider.Imdb);
+                            var seasonNum = episode.ParentIndexNumber;
+                            var episodeNum = episode.IndexNumber;
+
+                            if (!string.IsNullOrEmpty(seriesImdbId) && seasonNum.HasValue && episodeNum.HasValue)
+                            {
+                                imdbId = await cache.GetEpisodeImdbIdAsync(seriesImdbId, seasonNum.Value, episodeNum.Value).ConfigureAwait(false);
+                                if (!string.IsNullOrEmpty(imdbId))
+                                {
+                                    episodeResolved++;
+                                    _logger.LogInformation(
+                                        "Resolved in-memory IMDb ID '{0}' for episode '{1}' (S{2:D2}E{3:D2}) of series '{4}' to fetch rating",
+                                        imdbId,
+                                        episode.Name,
+                                        seasonNum.Value,
+                                        episodeNum.Value,
+                                        series?.Name);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(imdbId))
                 {
                     try
@@ -123,7 +160,8 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                         var rating = await cache.GetRatingAsync(imdbId).ConfigureAwait(false);
                         var target = Plugin.Instance?.Configuration.RatingTarget ?? RatingTarget.Community;
 
-                        if (RatingHelper.ApplyRating(item, rating, target, _logger))
+                        bool ratingUpdated = RatingHelper.ApplyRating(item, rating, target, _logger);
+                        if (ratingUpdated)
                         {
                             await item.UpdateToRepositoryAsync(ItemUpdateType.MetadataEdit, cancellationToken).ConfigureAwait(false);
                         }
@@ -135,6 +173,24 @@ namespace Jellyfin.Plugin.ImdbRatings.Tasks
                 }
 
                 ReportProgress();
+            }
+
+            if (episodeTotal > 0)
+            {
+                _logger.LogInformation(
+                    "Episode IMDb ID Resolution Summary: {Total} total episodes checked. " +
+                    "{Missing} were missing. " +
+                    "{Resolved} successfully resolved ({Percent:F1}%).",
+                    episodeTotal,
+                    episodeMissingId,
+                    episodeResolved,
+                    episodeMissingId > 0 ? (double)episodeResolved / episodeMissingId * 100.0 : 0.0);
+
+                await cache.SaveLibraryEpisodeStatsAsync(
+                    episodeTotal,
+                    episodeMissingId,
+                    episodeResolved,
+                    DateTime.UtcNow).ConfigureAwait(false);
             }
 
             _logger.LogInformation("Calculating IMDb ratings for {Count} seasons...", seasons.Count);

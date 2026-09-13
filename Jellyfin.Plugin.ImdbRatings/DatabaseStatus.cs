@@ -28,6 +28,11 @@ namespace Jellyfin.Plugin.ImdbRatings
         public int? TotalRatings { get; set; }
 
         /// <summary>
+        /// Gets or sets the total number of mapped episodes in the database.
+        /// </summary>
+        public int? TotalEpisodes { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether a database update is in progress.
         /// </summary>
         public bool IsUpdating { get; set; }
@@ -41,5 +46,35 @@ namespace Jellyfin.Plugin.ImdbRatings
         /// Gets or sets the configured dataset download URL.
         /// </summary>
         public string DatasetUrl { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets a value indicating whether episode resolution is enabled.
+        /// </summary>
+        public bool EnableEpisodeResolution { get; set; }
+
+        /// <summary>
+        /// Gets or sets the configured episode dataset download URL.
+        /// </summary>
+        public string EpisodeDatasetUrl { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the total number of library episodes evaluated during the last scan.
+        /// </summary>
+        public int? LibraryEpisodesTotal { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of library episodes that were missing an IMDb ID.
+        /// </summary>
+        public int? LibraryEpisodesMissingId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of missing library episode IDs resolved by this feature.
+        /// </summary>
+        public int? LibraryEpisodesResolved { get; set; }
+
+        /// <summary>
+        /// Gets or sets the timestamp of the last library ratings scan in UTC.
+        /// </summary>
+        public DateTime? LastLibraryScanUtc { get; set; }
     }
 }

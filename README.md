@@ -25,6 +25,7 @@
 ## ✨ Features
 
 * ⭐ **Official IMDb Ratings:** Fetches ratings directly from the official IMDb flat-file dataset (`title.ratings.tsv.gz`). No web scraping, no API keys, and no rate limits.
+* 🎬 **Automated Episode IMDb ID Resolution:** TV episodes often lack IMDb IDs from primary metadata providers (such as TMDb). The plugin automatically resolves missing episode IMDb IDs in-memory by matching the parent Series IMDb ID, Season number, and Episode number against IMDb's official `title.episode.tsv.gz` dataset to fetch ratings, without altering stored episode provider IDs.
 * 🎯 **Flexible Rating Target:** Choose whether IMDb scores are saved as Community Rating, Critic Rating, or both to best fit your client UI and library preferences.
 * 📊 **Calculated Season Ratings:** IMDb only provides ratings at the episode level. This plugin automatically computes and assigns weighted/average ratings for entire TV seasons based on their rated episodes.
 * ⚡ **Ultra-Low Memory Footprint:** Cached in a compact, indexed SQLite database for fast lookups with near-zero idle RAM usage.
@@ -85,11 +86,12 @@ Once the plugin is installed and your server has restarted:
 
 Navigate to **Dashboard** > **Plugins** > **IMDb Ratings** to access plugin settings and status:
 
-* **Live Status:** Displays whether the database is ready or updating, total number of indexed ratings, database file size on disk, and dataset download timestamp.
+* **Live Status:** Displays whether the database is ready or updating, total number of indexed ratings, total episodes mapped, database file size on disk, and dataset download timestamp.
 * **Rating Target:** Choose whether IMDb ratings should be saved as Community Rating, Critic Rating, or both (default: `Community Rating`).
 * **Cache Refresh Interval (Hours):** How often to check for an updated dataset from IMDb (default: `24` hours).
 * **Minimum Episode Rating Threshold for Seasons (%):** The percentage (0–100%) of rated episodes required in a season before calculating and assigning an average rating (default: `0%`).
-* **Custom Dataset URL:** Use a custom mirror or proxy if desired (default: `https://datasets.imdbws.com/title.ratings.tsv.gz`).
+* **Enable Missing Episode IMDb ID Resolution:** Automatically resolve episode IMDb IDs using the official IMDb episode dataset when upstream metadata providers lack them (default: `enabled`).
+* **Custom Dataset URLs:** Configure custom mirrors or proxies for `title.ratings.tsv.gz` and `title.episode.tsv.gz`.
 
 ---
 
@@ -105,22 +107,20 @@ To keep your library's ratings synchronized as community scores change on IMDb, 
 
 ## 🔍 How It Works
 
-1. The plugin periodically downloads the official IMDb non-commercial dataset (`title.ratings.tsv.gz`).
+1. The plugin periodically downloads the official IMDb non-commercial datasets (`title.ratings.tsv.gz` and `title.episode.tsv.gz`).
 2. The flat-file dataset is extracted and stored locally in a lightweight, indexed SQLite database.
-3. When Jellyfin scans media or executes the scheduled task, the plugin matches the item's stored IMDb ID against the SQLite database and updates the community rating.
-4. For seasons, the plugin queries ratings of all corresponding episodes and computes the season average.
+3. When Jellyfin scans media or executes the scheduled task, the plugin matches the item's stored IMDb ID against the SQLite database and updates the rating.
+4. If an episode lacks an IMDb ID (common with upstream metadata providers like TMDb), the plugin uses the parent Series IMDb ID along with the Season and Episode numbers to look up the episode's IMDb ID in-memory and applies the official rating without altering stored provider IDs.
+5. For seasons, the plugin queries ratings of all corresponding episodes and computes the season average.
 
 ---
 
 ## 🔧 Troubleshooting
 
-### Missing IMDb ratings for episodes (Jellyfin 10.11+ / 12+)
-Jellyfin 10.11 and 12 refactored database and metadata parsers. In some cases after upgrading, episode metadata is left incomplete or TMDb fails to store external IMDb IDs for episodes.
-
-If episode ratings are not appearing:
-1. Ensure a fallback provider such as **OMDb** or **TheTVDB** is installed and enabled under your library's **Episode metadata downloaders**.
-2. Navigate to the affected TV series, click the **...** (More) menu, and select **Refresh Metadata**.
-3. Select **Replace all metadata**. This forces Jellyfin to rebuild provider links and retrieve missing IMDb IDs.
+### Missing IMDb IDs for TV episodes
+Primary metadata providers (such as TMDb) frequently lack external IMDb IDs for individual episodes. With **Episode IMDb ID Resolution** enabled in the plugin settings (enabled by default), this is handled automatically:
+* As long as the parent **Series** has an IMDb ID (which metadata providers almost always have), the plugin matches the Season and Episode numbers against the official IMDb episode dataset in-memory to fetch and apply the official community score, keeping your episode metadata clean and unmodified.
+* If a series is completely missing an IMDb ID, ensure the parent Series is identified with an IMDb ID, or use **TheTVDB** or **OMDb** as a secondary provider.
 
 ---
 
