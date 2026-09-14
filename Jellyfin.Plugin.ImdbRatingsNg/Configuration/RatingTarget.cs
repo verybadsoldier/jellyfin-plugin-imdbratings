@@ -1,4 +1,4 @@
-namespace Jellyfin.Plugin.ImdbRatings.Configuration;
+namespace Jellyfin.Plugin.ImdbRatingsNg.Configuration;
 
 /// <summary>
 /// Specifies the target field where IMDb ratings should be saved.

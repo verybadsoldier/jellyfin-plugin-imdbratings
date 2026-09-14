@@ -1,8 +1,8 @@
-using Jellyfin.Plugin.ImdbRatings.Configuration;
+using Jellyfin.Plugin.ImdbRatingsNg.Configuration;
 using MediaBrowser.Controller.Entities;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.ImdbRatings;
+namespace Jellyfin.Plugin.ImdbRatingsNg;
 
 /// <summary>
 /// Helper methods for applying ratings to media items.

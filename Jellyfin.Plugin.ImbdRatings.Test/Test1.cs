@@ -3,11 +3,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
-using Jellyfin.Plugin.ImdbRatings;
+using Jellyfin.Plugin.ImdbRatingsNg;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 
-namespace Jellyfin.Plugin.ImbdRatings.Test
+namespace Jellyfin.Plugin.ImbdRatingsNg.Test
 {
     public sealed class Test1
     {

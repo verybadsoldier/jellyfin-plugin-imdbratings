@@ -1,4 +1,4 @@
-﻿#pragma warning disable CS1591
+#pragma warning disable CS1591
 
 using System;
 using System.Collections.Generic;
@@ -7,8 +7,8 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
-using Jellyfin.Plugin.ImdbRatings;
-using Jellyfin.Plugin.ImdbRatings.Configuration;
+using Jellyfin.Plugin.ImdbRatingsNg;
+using Jellyfin.Plugin.ImdbRatingsNg.Configuration;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Library;
@@ -16,7 +16,7 @@ using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.ImdbRatings.Tasks
+namespace Jellyfin.Plugin.ImdbRatingsNg.Tasks
 {
     public class UpdateImdbRatingsTask : IScheduledTask
     {

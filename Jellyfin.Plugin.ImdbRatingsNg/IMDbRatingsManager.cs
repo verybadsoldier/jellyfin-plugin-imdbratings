@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.ImdbRatings
+namespace Jellyfin.Plugin.ImdbRatingsNg
 {
     /// <summary>
     /// Manages the downloading, caching, and retrieval of IMDb ratings using an embedded SQLite database.
@@ -35,6 +35,7 @@ namespace Jellyfin.Plugin.ImdbRatings
             var dataPath = Plugin.Instance?.DataFolderPath ?? Path.GetTempPath();
             Directory.CreateDirectory(dataPath);
             _dbPath = Path.Combine(dataPath, "imdbratings.db");
+            MigrateOldDatabase(dataPath);
         }
 
         /// <summary>
@@ -517,6 +518,61 @@ namespace Jellyfin.Plugin.ImdbRatings
         {
             using var conn = new SqliteConnection($"Data Source={dbPath}");
             SqliteConnection.ClearPool(conn);
+        }
+
+        private void MigrateOldDatabase(string dataPath)
+        {
+            TryMigrateDatabase(_dbPath, dataPath, _logger);
+        }
+
+        internal static bool TryMigrateDatabase(string currentDbPath, string dataPath, ILogger? logger = null)
+        {
+            if (File.Exists(currentDbPath))
+            {
+                return false;
+            }
+
+            var parentDir = Path.GetDirectoryName(dataPath);
+            if (string.IsNullOrEmpty(parentDir))
+            {
+                return false;
+            }
+
+            var oldDbPath = Path.Combine(parentDir, "IMDb Ratings", "imdbratings.db");
+            if (File.Exists(oldDbPath))
+            {
+                try
+                {
+                    logger?.LogInformation("Found existing IMDb ratings database at {0}. Migrating to {1}...", oldDbPath, currentDbPath);
+
+                    var currentDir = Path.GetDirectoryName(currentDbPath);
+                    if (!string.IsNullOrEmpty(currentDir))
+                    {
+                        Directory.CreateDirectory(currentDir);
+                    }
+
+                    File.Copy(oldDbPath, currentDbPath, overwrite: false);
+
+                    if (File.Exists(oldDbPath + "-wal"))
+                    {
+                        File.Copy(oldDbPath + "-wal", currentDbPath + "-wal", overwrite: true);
+                    }
+
+                    if (File.Exists(oldDbPath + "-shm"))
+                    {
+                        File.Copy(oldDbPath + "-shm", currentDbPath + "-shm", overwrite: true);
+                    }
+
+                    logger?.LogInformation("Successfully migrated IMDb ratings database.");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Failed to migrate old IMDb ratings database from {0}", oldDbPath);
+                }
+            }
+
+            return false;
         }
 
         private async Task RefreshDatabase()

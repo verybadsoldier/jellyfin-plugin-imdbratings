@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
-using Jellyfin.Plugin.ImdbRatings;
+using Jellyfin.Plugin.ImdbRatingsNg;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
 using Xunit;
 
-namespace Jellyfin.Plugin.ImbdRatings.Test
+namespace Jellyfin.Plugin.ImbdRatingsNg.Test
 {
     public sealed class EpisodeResolutionTests : IDisposable
     {

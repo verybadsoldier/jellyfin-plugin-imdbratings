@@ -1,11 +1,11 @@
 using System.Collections.Generic;
-using Jellyfin.Plugin.ImdbRatings;
-using Jellyfin.Plugin.ImdbRatings.Configuration;
+using Jellyfin.Plugin.ImdbRatingsNg;
+using Jellyfin.Plugin.ImdbRatingsNg.Configuration;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
 using Xunit;
 
-namespace Jellyfin.Plugin.ImbdRatings.Test
+namespace Jellyfin.Plugin.ImbdRatingsNg.Test
 {
     public sealed class SeasonRatingCalculatorTests
     {
@@ -222,4 +222,3 @@ namespace Jellyfin.Plugin.ImbdRatings.Test
         }
     }
 }
-

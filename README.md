@@ -1,22 +1,22 @@
 <p align="center">
-  <img src="logo.png" alt="Jellyfin IMDb Ratings Plugin Logo" width="600">
+  <img src="logo.png" alt="Jellyfin IMDb Ratings NG Plugin Logo" width="600">
 </p>
 
-<h1 align="center">Jellyfin IMDb Ratings Plugin</h1>
+<h1 align="center">Jellyfin IMDb Ratings NG Plugin</h1>
 
 <p align="center">
   <strong>Automatically fetch official IMDb community ratings and calculate season averages for your Jellyfin media library.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases"><img src="https://img.shields.io/github/v/release/verybadsoldier/jellyfin-plugin-imdbratings?style=flat-square" alt="Release"></a>
+  <a href="https://github.com/verybadsoldier/jellyfin-plugin-imdbratings-ng/releases"><img src="https://img.shields.io/github/v/release/verybadsoldier/jellyfin-plugin-imdbratings-ng?style=flat-square" alt="Release"></a>
   <a href="https://jellyfin.org/"><img src="https://img.shields.io/badge/Jellyfin-10.11%20%7C%2012%2B-00a4dc?style=flat-square&logo=jellyfin&logoColor=white" alt="Jellyfin Compatibility"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg?style=flat-square" alt="License: GPL v3"></a>
 </p>
 
 ---
 
-**Jellyfin.Plugin.ImdbRatings** is a custom metadata provider for [Jellyfin](https://jellyfin.org/) that imports and maintains community ratings for movies, series, and episodes using official IMDb datasets. It also automatically calculates average IMDb ratings for TV show seasons.
+**Jellyfin.Plugin.ImdbRatingsNg** is a custom metadata provider for [Jellyfin](https://jellyfin.org/) that imports and maintains community ratings for movies, series, and episodes using official IMDb datasets. It also automatically calculates average IMDb ratings for TV show seasons.
 
 > [!NOTE]
 > **Drastically Reduced Memory Footprint (v4.0.0+):**
@@ -42,19 +42,19 @@
 1. In your Jellyfin server interface, navigate to **Dashboard** > **Plugins** > **Repositories**.
 2. Click the **`+`** icon to add a new repository.
 3. Enter the following details:
-   * **Repository Name:** `IMDb Ratings`
+   * **Repository Name:** `IMDb Ratings NG`
    * **Repository URL:**
      ```text
-     https://verybadsoldier.github.io/jellyfin-plugin-imdbratings/manifest.json
+     https://verybadsoldier.github.io/jellyfin-plugin-imdbratings-ng/manifest.json
      ```
 4. Click **Save**.
-5. Switch to the **Catalog** tab, find **IMDb Ratings**, and click **Install**.
+5. Switch to the **Catalog** tab, find **IMDb Ratings NG**, and click **Install**.
 6. **Restart** your Jellyfin server.
 
 ### Method 2: Manual ZIP Installation
 
-1. Download the latest release `.zip` from the [Releases](https://github.com/verybadsoldier/jellyfin-plugin-imdbratings/releases) page.
-2. Extract the `.zip` archive into your Jellyfin server's `plugins` folder (e.g., `plugins/IMDbRatings`).
+1. Download the latest release `.zip` from the [Releases](https://github.com/verybadsoldier/jellyfin-plugin-imdbratings-ng/releases) page.
+2. Extract the `.zip` archive into your Jellyfin server's `plugins` folder (e.g., `plugins/IMDbRatingsNg`).
 3. **Restart** your Jellyfin server.
 
 ---
@@ -84,7 +84,7 @@ Once the plugin is installed and your server has restarted:
 
 ## ⚙️ Plugin Configuration
 
-Navigate to **Dashboard** > **Plugins** > **IMDb Ratings** to access plugin settings and status:
+Navigate to **Dashboard** > **Plugins** > **IMDb Ratings NG** to access plugin settings and status:
 
 * **Live Status:** Displays whether the database is ready or updating, total number of indexed ratings, total episodes mapped, database file size on disk, and dataset download timestamp.
 * **Rating Target:** Choose whether IMDb ratings should be saved as Community Rating, Critic Rating, or both (default: `Community Rating`).
@@ -95,13 +95,13 @@ Navigate to **Dashboard** > **Plugins** > **IMDb Ratings** to access plugin sett
 
 ---
 
-## ⏰ Scheduled Task: "Update IMDb Ratings"
+## ⏰ Scheduled Task: "Update IMDb Ratings NG"
 
 To keep your library's ratings synchronized as community scores change on IMDb, the plugin registers a scheduled task in Jellyfin.
 
 * **What it does:** Scans your libraries for all Movies, Series, Episodes, and Seasons with the provider enabled, updates item ratings from the local SQLite cache, and recalculates season averages.
 * **Default Schedule:** Runs automatically **every day at 3:00 AM**.
-* **Manual Execution:** You can run this task at any time or adjust its schedule via **Dashboard** > **Scheduled Tasks** > **Library** > **Update IMDb Ratings**.
+* **Manual Execution:** You can run this task at any time or adjust its schedule via **Dashboard** > **Scheduled Tasks** > **Library** > **Update IMDb Ratings NG**.
 
 ---
 
@@ -134,4 +134,5 @@ Primary metadata providers (such as TMDb) frequently lack external IMDb IDs for 
 ## 📄 Data Notice & License
 
 * **Data Source:** This plugin uses the [IMDb Non-Commercial Datasets](https://developer.imdb.com/non-commercial-datasets/), which are provided free of charge for **personal and non-commercial** use.
+* **Disclaimer:** This plugin is an unofficial open-source project and is not affiliated with, endorsed by, or sponsored by IMDb.com, Inc. or Amazon.
 * **License:** This project is open source and licensed under the [GNU General Public License v3.0](LICENSE).

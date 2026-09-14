@@ -1,6 +1,6 @@
 using MediaBrowser.Model.Plugins;
 
-namespace Jellyfin.Plugin.ImdbRatings.Configuration;
+namespace Jellyfin.Plugin.ImdbRatingsNg.Configuration;
 
 /// <summary>
 /// Plugin configuration.

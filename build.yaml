@@ -1,17 +1,17 @@
 ---
-name: "IMDb Ratings"
+name: "IMDb Ratings NG"
 guid: "12418add-9a9d-422d-8e35-dde91cf5baf9"
 version: "<template>"
 targetAbi: "12.0.0.0"
 framework: "<template>"
-imageUrl: "https://raw.githubusercontent.com/verybadsoldier/jellyfin-plugin-imdbratings/main/logo.png"
+image: "logo.png"
 overview: "Ratings from IMDb"
 description: >
   Fetch IMDb ratings for movies, TV shows and episodes from the IMDb official source and use as community ratings in Jellyfin
 category: "General"
 owner: "verybadsoldier"
 artifacts:
-  - Jellyfin.Plugin.ImdbRatings.dll
+  - Jellyfin.Plugin.ImdbRatingsNg.dll
   - Microsoft.Data.Sqlite.dll
   - SQLitePCLRaw.core.dll
   - SQLitePCLRaw.batteries_v2.dll

@@ -26,7 +26,7 @@ jobs:
       - name: Extract .NET version from csproj
         id: extract_dotnet
         run: |
-          CSPROJ_PATH="./Jellyfin.Plugin.ImdbRatings/Jellyfin.Plugin.ImdbRatings.csproj"
+          CSPROJ_PATH="./Jellyfin.Plugin.ImdbRatingsNg/Jellyfin.Plugin.ImdbRatingsNg.csproj"
           
           # Extract the TargetFramework value (e.g., "net9.0")
           TARGET_FRAMEWORK=$(grep -oP '(?<=<TargetFramework>)[^<]+' "$CSPROJ_PATH")
@@ -106,7 +106,7 @@ jobs:
         run: |
           # Use git describe to generate a meaningful name
           DESC=$(git describe --tags)
-          echo "artifact_name=jellyfin-plugin-imdbratings-${DESC}" >> $GITHUB_OUTPUT
+          echo "artifact_name=jellyfin-plugin-imdbratings-ng-${DESC}" >> $GITHUB_OUTPUT
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v5
@@ -185,14 +185,17 @@ jobs:
           echo "download url: ${DOWNLOAD_URL}"
           
           echo "::group::Updating manifest.json"
-          jprm repo add ./manifest.json "$(ls -d *.zip)" -u "${DOWNLOAD_URL}" -U "${DOWNLOAD_URL}"
+          REPO_URL="https://${{ github.repository_owner }}.github.io/${GITHUB_REPOSITORY#*/}"
+          echo "repo url: ${REPO_URL}"
+          jprm repo add ./manifest.json "$(ls -d *.zip)" -u "${REPO_URL}" -U "${DOWNLOAD_URL}"
           echo "::endgroup::"
 
       - name: Commit file
         run: |-
           git config --global user.name "${GITHUB_ACTOR}"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -a -m "Update manifest.json for release ${GITHUB_REF#refs/tags/}"
+          git add -A
+          git diff --staged --quiet || git commit -m "Update manifest.json for release ${GITHUB_REF#refs/tags/}"
 
       - name: Push changes
         uses: ad-m/github-push-action@v1.0.0

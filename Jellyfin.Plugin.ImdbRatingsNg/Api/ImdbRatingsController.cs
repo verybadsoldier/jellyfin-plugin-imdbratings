@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace Jellyfin.Plugin.ImdbRatings.Api
+namespace Jellyfin.Plugin.ImdbRatingsNg.Api
 {
     /// <summary>
     /// API controller for IMDb ratings plugin management and status.

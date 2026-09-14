@@ -1,6 +1,6 @@
 using System;
 
-namespace Jellyfin.Plugin.ImdbRatings
+namespace Jellyfin.Plugin.ImdbRatingsNg
 {
     /// <summary>
     /// Represents the status of the local IMDb ratings database.
